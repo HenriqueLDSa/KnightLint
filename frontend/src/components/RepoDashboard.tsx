@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import "../css/App.css";
 
 interface PullRequest {
@@ -14,6 +14,7 @@ interface PullRequest {
 export default function RepoDashboard() {
     const { repoName } = useParams<{ repoName: string }>();
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const token = searchParams.get("token") || "";
     const username = searchParams.get("username") || "";
 
@@ -65,7 +66,34 @@ export default function RepoDashboard() {
                 textAlign: "center",
             }}
         >
-            <h1 className="dashboard-title">
+            <button
+                onClick={() => navigate(`/select-repo?token=${token}&username=${username}`)}
+                style={{
+                    position: "absolute",
+                    top: "2rem",
+                    left: "2rem",
+                    backgroundColor: "transparent",
+                    border: "1px solid #3C3C5C",
+                    color: "white",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontFamily: "Jersey 20, sans-serif",
+                    fontSize: "1rem",
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#1a1a2e";
+                    e.currentTarget.style.borderColor = "#646cff";
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.borderColor = "#3C3C5C";
+                }}
+            >
+                ← Back to Repos
+            </button>
+
+            <h1 className="landing-title">
                 {repoName}
             </h1>
 
@@ -75,7 +103,7 @@ export default function RepoDashboard() {
                 <div
                     key={pr.id}
                     onClick={() =>
-                        window.open(pr.url, "_blank")
+                        navigate(`/repo/${repoName}/pr/${pr.number}?token=${token}&username=${username}`)
                     }
                     style={{
                         width: "300px",

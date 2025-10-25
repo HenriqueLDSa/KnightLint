@@ -3,6 +3,7 @@ import "./css/App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import RepoSelect from "./components/RepoSelect";
 import RepoDashboard from "./components/RepoDashboard";
+import PREditor from "./components/PREditor";
 
 function LandingPage() {
   const handleGitHubLogin = () => {
@@ -35,6 +36,9 @@ function App() {
 
         {/* 👇 Repo dashboard page */}
         <Route path="/repo/:repoName" element={<RepoDashboard />} />
+
+        {/* 👇 PR Editor page */}
+        <Route path="/repo/:repoName/pr/:prNumber" element={<PREditor />} />
       </Routes>
     </Router>
   );

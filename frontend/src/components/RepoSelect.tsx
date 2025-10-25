@@ -1,46 +1,77 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "../css/App.css";
 
+interface Repository {
+    id: number;
+    name: string;
+    description: string;
+    language: string;
+    updated_at: string;
+}
+
 export default function RepoSelect() {
-    const [repoName, setRepoName] = useState("");
+    const navigate = useNavigate();
+    const [repos, setRepos] = useState<Repository[]>([]);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
 
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token") || "";
     const username = params.get("username") || "";
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!repoName) {
-            setError("Please enter a repository name.");
-            setSuccess("");
+    useEffect(() => {
+        if (!token || !username) {
+            setError("Authentication required. Please log in again.");
+            setLoading(false);
             return;
         }
 
-        try {
-            const res = await fetch(
-                `http://localhost:8000/verify-repo?token=${token}&username=${username}&repo_name=${repoName}`
-            );
-            if (res.ok) {
-                const repoInfo = await res.json();
-                console.log("✅ Repo verified:", repoInfo);
-                setSuccess("✅ Repo verified successfully!");
-                setError("");
-                // Redirect to next page with token and username
-                window.location.href = `/repo/${repoName}?token=${token}&username=${username}`;
-            } else {
-                const err = await res.json();
-                setError(err.error);
-                setSuccess("");
+        const fetchRepos = async () => {
+            try {
+                const res = await fetch(
+                    `http://localhost:8000/user-repos?token=${token}&username=${username}`
+                );
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({}));
+                    setError(errorData.error || "Failed to load repositories");
+                    setLoading(false);
+                    return;
+                }
+                const data = await res.json();
+                console.log("Fetched repos:", data);
+                setRepos(data.repositories || []);
+                setLoading(false);
+            } catch (err) {
+                console.error("Failed to fetch repositories:", err);
+                setError("An error occurred while loading repositories.");
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Error verifying repo:", error);
-            setError("An error occurred while verifying the repository. Please try again.");
-            setSuccess("");
-        }
+        };
+
+        fetchRepos();
+    }, [token, username]);
+
+    const handleRepoClick = (repoName: string) => {
+        navigate(`/repo/${repoName}?token=${token}&username=${username}`);
     };
+
+    if (loading) {
+        return (
+            <div
+                style={{
+                    minHeight: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "#0D0827",
+                    color: "white",
+                }}
+            >
+                <p>Loading your repositories...</p>
+            </div>
+        );
+    }
 
     return (
         <div
@@ -53,46 +84,70 @@ export default function RepoSelect() {
                 backgroundColor: "#0D0827",
                 color: "white",
                 textAlign: "center",
+                padding: "2rem",
             }}
         >
             <h1 className="landing-title">
-                Enter Repo Name
+                Select a Repository
             </h1>
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <input
-                    type="text"
-                    placeholder="e.g. KnightLint"
-                    value={repoName}
-                    onChange={(e) => setRepoName(e.target.value)}
-                    style={{
-                        padding: "0.75rem 1rem",
-                        borderRadius: "25px",
-                        border: "1px solid #3C3C5C",
-                        background: "transparent",
-                        color: "white",
-                        width: "300px",
-                        fontSize: "1rem",
-                        outline: "none",
-                        marginBottom: "1rem",
-                    }}
-                />
-                <button
-                    type="submit"
-                    className="github-button-text"
-                >
-                    Start Game
-                </button>
-            </form>
+
             {error && (
-                <p style={{ color: "#ff6b6b", marginTop: "1rem" }}>
+                <p style={{ color: "#ff6b6b", marginBottom: "2rem" }}>
                     {error}
                 </p>
             )}
-            {success && (
-                <p style={{ color: "#4ade80", marginTop: "1rem" }}>
-                    {success}
-                </p>
+
+            {!error && repos.length === 0 && (
+                <p style={{ color: "#888" }}>No repositories found.</p>
             )}
+
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                    gap: "1rem",
+                    width: "100%",
+                    maxWidth: "1200px",
+                    marginTop: "2rem",
+                }}
+            >
+                {repos.map((repo) => (
+                    <div
+                        key={repo.id}
+                        onClick={() => handleRepoClick(repo.name)}
+                        style={{
+                            backgroundColor: "transparent",
+                            border: "1px solid #3C3C5C",
+                            borderRadius: "10px",
+                            padding: "1.5rem",
+                            cursor: "pointer",
+                            transition: "all 0.3s ease",
+                            fontFamily: "Jersey 20, sans-serif",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#1a1a2e";
+                            e.currentTarget.style.borderColor = "#646cff";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.borderColor = "#3C3C5C";
+                        }}
+                    >
+                        <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.5rem" }}>
+                            {repo.name}
+                        </h3>
+                        {repo.description && (
+                            <p style={{ color: "#888", fontSize: "0.9rem", margin: "0.5rem 0" }}>
+                                {repo.description}
+                            </p>
+                        )}
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem", fontSize: "0.85rem", color: "#888" }}>
+                            {repo.language && <span>🔹 {repo.language}</span>}
+                            <span>Updated: {new Date(repo.updated_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

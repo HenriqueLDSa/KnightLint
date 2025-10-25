@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
 import httpx
 import os
 from dotenv import load_dotenv
+from app.database import get_db
+from app import crud
 
 # Load env variables here
 load_dotenv()
@@ -23,7 +26,7 @@ async def github_login():
 
 
 @router.get("/login/callback")
-async def github_callback(code: str):
+async def github_callback(code: str, db: Session = Depends(get_db)):
     # Exchange code for access token
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
@@ -48,5 +51,21 @@ async def github_callback(code: str):
             headers={"Authorization": f"Bearer {access_token}"}
         )
         user = user_resp.json()
+    
+    # Get or create user in database
+    github_username = user.get("login")
+    db_user = crud.get_user_by_username(db, github_username)
+    
+    if not db_user:
+        # Create new user
+        db_user = crud.create_user(db, github_username, access_token)
+    else:
+        # Update access token for existing user
+        db_user = crud.update_user_token(db, db_user.id, access_token)
 
-    return {"user": user, "token": access_token}
+    return {
+        "user": user, 
+        "token": access_token,
+        "db_user_id": db_user.id
+    }
+

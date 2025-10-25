@@ -1,3 +1,7 @@
 #!/bin/bash
-source .venv/bin/activate
-uvicorn app.main:app --reload --port 8000 --host 0.0.0.0
+# Use the PORT env var provided by Railway (or default to 8000 locally)
+PORT=${PORT:-8000}
+
+# Run uvicorn without virtualenv activation (the deployment environment will install deps)
+# Do NOT use --reload in production
+exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT"

@@ -54,6 +54,7 @@ export default function PREditor() {
     const [analysis, setAnalysis] = useState<Analysis | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [committing, setCommitting] = useState(false);
+    const [activeTab, setActiveTab] = useState<"security" | "code_quality" | "performance">("security");
 
     useEffect(() => {
         if (!token || !username) {
@@ -214,24 +215,20 @@ export default function PREditor() {
     }
 
     return (
-        <div style={{ minHeight: "100vh", backgroundColor: "#0D0827", color: "white", display: "flex", flexDirection: "column" }}>
-            {/* Header */}
-            <div style={{ padding: "1rem 2rem", borderBottom: "1px solid #3C3C5C", position: "relative" }}>
+        <div style={{ height: "100vh", width: "100vw", backgroundColor: "#0D0827", color: "white", display: "flex", flexDirection: "column", overflow: "hidden", position: "fixed", top: 0, left: 0 }}>
+            {/* Compact Header */}
+            <div style={{ padding: "0.5rem 1rem", borderBottom: "1px solid #3C3C5C", display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
                 <button
                     onClick={() => navigate(`/repo/${repoName}?token=${token}&username=${username}`)}
                     style={{
-                        position: "absolute",
-                        left: "1rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
                         backgroundColor: "transparent",
                         border: "1px solid #3C3C5C",
                         color: "white",
-                        padding: "0.5rem 1rem",
+                        padding: "0.4rem 0.8rem",
                         borderRadius: "8px",
                         cursor: "pointer",
                         fontFamily: "Jersey 20, sans-serif",
-                        fontSize: "0.9rem",
+                        fontSize: "0.85rem",
                     }}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = "#1a1a2e";
@@ -244,213 +241,267 @@ export default function PREditor() {
                 >
                     ← Back to PRs
                 </button>
-                <h1 className="landing-title" style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>
-                    PR #{prDetails.number}: {prDetails.title}
+                <h1 className="landing-title" style={{ fontSize: "1.2rem", margin: 0, animation: "none", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <img src="/favicon.ico" alt="PR" style={{ width: "24px", height: "24px" }} />
+                    {prDetails.title}
                 </h1>
-                <p style={{ color: "#888", fontSize: "0.9rem" }}>
+                <p style={{ color: "#888", fontSize: "0.8rem", margin: 0, marginLeft: "auto" }}>
                     by {prDetails.user} • {prDetails.state}
                 </p>
             </div>
 
-            <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-                {/* Left sidebar: AI Analysis */}
-                <div style={{ width: "350px", borderRight: "1px solid #3C3C5C", overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column" }}>
-                    <div style={{ marginBottom: "1rem" }}>
-                        <button
-                            onClick={analyzePR}
-                            disabled={analyzing}
-                            style={{
-                                width: "100%",
-                                backgroundColor: analyzing ? "#555" : "#646cff",
-                                border: "none",
-                                color: "white",
-                                padding: "0.75rem",
-                                borderRadius: "8px",
-                                cursor: analyzing ? "not-allowed" : "pointer",
-                                fontFamily: "Jersey 20, sans-serif",
-                                fontSize: "1rem",
-                                marginBottom: "0.5rem"
-                            }}
-                        >
-                            {analyzing ? "Analyzing..." : "🔍 Analyze with AI"}
-                        </button>
-                        <button
-                            onClick={recheckPR}
-                            disabled={analyzing}
-                            style={{
-                                width: "100%",
-                                backgroundColor: analyzing ? "#555" : "transparent",
-                                border: "1px solid #3C3C5C",
-                                color: "white",
-                                padding: "0.75rem",
-                                borderRadius: "8px",
-                                cursor: analyzing ? "not-allowed" : "pointer",
-                                fontFamily: "Jersey 20, sans-serif",
-                                fontSize: "1rem"
-                            }}
-                        >
-                            {analyzing ? "Rechecking..." : "🔄 Recheck PR"}
-                        </button>
+            <div style={{ display: "flex", flex: 1, overflow: "hidden", gap: "1rem", padding: "1rem", minHeight: 0 }}>
+                {/* Left: Text Editor + Files Below */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.75rem", minWidth: 0 }}>
+                    {/* Text Editor - BIGGER */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", border: "1px solid #3C3C5C", borderRadius: "8px", padding: "0.75rem", minHeight: 0 }}>
+                        {selectedFile ? (
+                            <>
+                                <div style={{ marginBottom: "0.5rem", fontFamily: "Jersey 20, sans-serif", fontSize: "0.9rem" }}>
+                                    Editing: {selectedFile.filename}
+                                </div>
+                                <div style={{ flex: 1, border: "1px solid #3C3C5C", borderRadius: "8px", overflow: "hidden", marginBottom: "0.5rem", minHeight: 0 }}>
+                                    <Editor
+                                        height="100%"
+                                        defaultLanguage={selectedFile.filename.split('.').pop() || "plaintext"}
+                                        theme="vs-dark"
+                                        value={fileContent}
+                                        onChange={(value) => setFileContent(value || "")}
+                                        options={{
+                                            minimap: { enabled: false },
+                                            fontSize: 14,
+                                            lineNumbers: "on",
+                                            scrollBeyondLastLine: false,
+                                            automaticLayout: true,
+                                        }}
+                                    />
+                                </div>
+                                {/* Bottom right buttons */}
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                                    <button
+                                        onClick={recheckPR}
+                                        disabled={analyzing}
+                                        style={{
+                                            backgroundColor: "transparent",
+                                            border: "1px solid #3C3C5C",
+                                            color: "white",
+                                            padding: "0.5rem 1rem",
+                                            borderRadius: "8px",
+                                            cursor: analyzing ? "not-allowed" : "pointer",
+                                            fontFamily: "Jersey 20, sans-serif",
+                                            fontSize: "0.9rem",
+                                        }}
+                                    >
+                                        {analyzing ? "Rechecking..." : "🔄 Recheck"}
+                                    </button>
+                                    <button
+                                        onClick={commitChanges}
+                                        disabled={committing}
+                                        style={{
+                                            backgroundColor: "transparent",
+                                            border: "1px solid #3C3C5C",
+                                            color: "white",
+                                            padding: "0.5rem 1rem",
+                                            borderRadius: "8px",
+                                            cursor: committing ? "not-allowed" : "pointer",
+                                            fontFamily: "Jersey 20, sans-serif",
+                                            fontSize: "0.9rem",
+                                        }}
+                                    >
+                                        {committing ? "Committing..." : "💾 Commit Changes"}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <p>Select a file to view and edit</p>
+                            </div>
+                        )}
                     </div>
 
-                    {analysis && (
-                        <div style={{ flex: 1, overflowY: "auto" }}>
-                            <h3 style={{ fontFamily: "Jersey 20, sans-serif", marginBottom: "1rem", fontSize: "1.3rem" }}>
-                                AI Analysis
-                            </h3>
-
-                            {/* Summary */}
-                            {analysis.summary && (
-                                <div style={{ marginBottom: "1.5rem", padding: "1rem", backgroundColor: "#1a1a2e", borderRadius: "8px" }}>
-                                    <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#646cff" }}>Summary</h4>
-                                    <p style={{ fontSize: "0.85rem", color: "#ccc" }}>{analysis.summary}</p>
+                    {/* Files Changed - Below Editor */}
+                    <div style={{ height: "100px", border: "1px solid #3C3C5C", borderRadius: "8px", padding: "0.75rem", overflowY: "auto", flexShrink: 0 }}>
+                        <h3 style={{ fontFamily: "Jersey 20, sans-serif", marginBottom: "0.5rem", fontSize: "0.95rem", marginTop: 0 }}>
+                            Files Changed ({prDetails.files.length})
+                        </h3>
+                        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                            {prDetails.files.map((file) => (
+                                <div
+                                    key={file.filename}
+                                    onClick={() => loadFileContent(file)}
+                                    style={{
+                                        padding: "0.5rem 1rem",
+                                        backgroundColor: "transparent",
+                                        border: selectedFile?.filename === file.filename ? "2px solid #646cff" : "1px solid #3C3C5C",
+                                        borderRadius: "8px",
+                                        cursor: "pointer",
+                                        fontFamily: "Jersey 20, sans-serif",
+                                        fontSize: "0.85rem",
+                                    }}
+                                >
+                                    {file.filename}
                                 </div>
-                            )}
-
-                            {/* Security Issues */}
-                            <div style={{ marginBottom: "1.5rem" }}>
-                                <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#ff6b6b" }}>
-                                    🔒 Security Issues ({analysis.security_issues.length})
-                                </h4>
-                                {analysis.security_issues.length === 0 ? (
-                                    <p style={{ fontSize: "0.85rem", color: "#888" }}>No issues found</p>
-                                ) : (
-                                    analysis.security_issues.map((issue, idx) => (
-                                        <div key={idx} style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#1a1a2e", borderRadius: "8px", borderLeft: `3px solid ${issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00"}` }}>
-                                            <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: "0.25rem" }}>
-                                                {issue.file} • {issue.severity.toUpperCase()}
-                                            </div>
-                                            <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>{issue.description}</div>
-                                            <div style={{ fontSize: "0.8rem", color: "#4ade80" }}>💡 {issue.suggestion}</div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            {/* Code Quality Issues */}
-                            <div style={{ marginBottom: "1.5rem" }}>
-                                <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#ffa500" }}>
-                                    ✨ Code Quality ({analysis.code_quality_issues.length})
-                                </h4>
-                                {analysis.code_quality_issues.length === 0 ? (
-                                    <p style={{ fontSize: "0.85rem", color: "#888" }}>No issues found</p>
-                                ) : (
-                                    analysis.code_quality_issues.map((issue, idx) => (
-                                        <div key={idx} style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#1a1a2e", borderRadius: "8px", borderLeft: `3px solid ${issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00"}` }}>
-                                            <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: "0.25rem" }}>
-                                                {issue.file} • {issue.severity.toUpperCase()}
-                                            </div>
-                                            <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>{issue.description}</div>
-                                            <div style={{ fontSize: "0.8rem", color: "#4ade80" }}>💡 {issue.suggestion}</div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            {/* Performance Issues */}
-                            <div style={{ marginBottom: "1.5rem" }}>
-                                <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#4ade80" }}>
-                                    ⚡ Performance ({analysis.performance_issues.length})
-                                </h4>
-                                {analysis.performance_issues.length === 0 ? (
-                                    <p style={{ fontSize: "0.85rem", color: "#888" }}>No issues found</p>
-                                ) : (
-                                    analysis.performance_issues.map((issue, idx) => (
-                                        <div key={idx} style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#1a1a2e", borderRadius: "8px", borderLeft: `3px solid ${issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00"}` }}>
-                                            <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: "0.25rem" }}>
-                                                {issue.file} • {issue.severity.toUpperCase()}
-                                            </div>
-                                            <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>{issue.description}</div>
-                                            <div style={{ fontSize: "0.8rem", color: "#4ade80" }}>💡 {issue.suggestion}</div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
+                            ))}
                         </div>
-                    )}
-
-                    {!analysis && !analyzing && (
-                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>
-                            <p style={{ textAlign: "center" }}>Click "Analyze with AI" to get AI-powered code review</p>
-                        </div>
-                    )}
+                    </div>
                 </div>
 
-                {/* Middle: File list */}
-                <div style={{ width: "300px", borderRight: "1px solid #3C3C5C", overflowY: "auto", padding: "1rem" }}>
-                    <h3 style={{ fontFamily: "Jersey 20, sans-serif", marginBottom: "1rem" }}>
-                        Files Changed ({prDetails.files.length})
-                    </h3>
-                    {prDetails.files.map((file) => (
-                        <div
-                            key={file.filename}
-                            onClick={() => loadFileContent(file)}
+                {/* Right: AI Analysis */}
+                <div style={{ width: "450px", border: "1px solid #3C3C5C", borderRadius: "8px", padding: "1rem", display: "flex", flexDirection: "column", minHeight: 0, flexShrink: 0 }}>
+                    {/* Tab Buttons */}
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+                        <button
+                            onClick={() => {
+                                setActiveTab("security");
+                                if (!analysis && !analyzing) analyzePR();
+                            }}
                             style={{
+                                flex: 1,
+                                backgroundColor: "transparent",
+                                border: activeTab === "security" ? "2px solid #646cff" : "1px solid #3C3C5C",
+                                color: "white",
                                 padding: "0.75rem",
-                                marginBottom: "0.5rem",
-                                backgroundColor: selectedFile?.filename === file.filename ? "#1a1a2e" : "transparent",
-                                border: "1px solid #3C3C5C",
                                 borderRadius: "8px",
                                 cursor: "pointer",
                                 fontFamily: "Jersey 20, sans-serif",
+                                fontSize: "0.9rem",
                             }}
                         >
-                            <div style={{ fontSize: "0.9rem", marginBottom: "0.25rem" }}>{file.filename}</div>
-                            <div style={{ fontSize: "0.75rem", color: "#888" }}>
-                                <span style={{ color: "#4ade80" }}>+{file.additions}</span>
-                                {" "}
-                                <span style={{ color: "#ff6b6b" }}>-{file.deletions}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                            Security
+                        </button>
+                        <button
+                            onClick={() => {
+                                setActiveTab("code_quality");
+                                if (!analysis && !analyzing) analyzePR();
+                            }}
+                            style={{
+                                flex: 1,
+                                backgroundColor: "transparent",
+                                border: activeTab === "code_quality" ? "2px solid #646cff" : "1px solid #3C3C5C",
+                                color: "white",
+                                padding: "0.75rem",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontFamily: "Jersey 20, sans-serif",
+                                fontSize: "0.9rem",
+                            }}
+                        >
+                            Code Quality
+                        </button>
+                        <button
+                            onClick={() => {
+                                setActiveTab("performance");
+                                if (!analysis && !analyzing) analyzePR();
+                            }}
+                            style={{
+                                flex: 1,
+                                backgroundColor: "transparent",
+                                border: activeTab === "performance" ? "2px solid #646cff" : "1px solid #3C3C5C",
+                                color: "white",
+                                padding: "0.75rem",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontFamily: "Jersey 20, sans-serif",
+                                fontSize: "0.9rem",
+                            }}
+                        >
+                            Performance
+                        </button>
+                    </div>
 
-                {/* Right: Editor */}
-                <div style={{ flex: 1, padding: "1rem", display: "flex", flexDirection: "column" }}>
-                    {selectedFile ? (
-                        <>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem", fontFamily: "Jersey 20, sans-serif" }}>
-                                <div>Editing: {selectedFile.filename}</div>
-                                <button
-                                    onClick={commitChanges}
-                                    disabled={committing}
-                                    style={{
-                                        backgroundColor: committing ? "#555" : "#4ade80",
-                                        border: "none",
-                                        color: "#0D0827",
-                                        padding: "0.5rem 1rem",
-                                        borderRadius: "8px",
-                                        cursor: committing ? "not-allowed" : "pointer",
-                                        fontFamily: "Jersey 20, sans-serif",
-                                        fontSize: "0.9rem",
-                                        fontWeight: "bold"
-                                    }}
-                                >
-                                    {committing ? "Committing..." : "💾 Commit Changes"}
-                                </button>
+                    {/* Issues Display with Colored Boxes */}
+                    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
+                        {analyzing ? (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                <p>Analyzing with AI...</p>
                             </div>
-                            <div style={{ flex: 1, border: "1px solid #3C3C5C", borderRadius: "8px", overflow: "hidden" }}>
-                                <Editor
-                                    height="100%"
-                                    defaultLanguage={selectedFile.filename.split('.').pop() || "plaintext"}
-                                    theme="vs-dark"
-                                    value={fileContent}
-                                    onChange={(value) => setFileContent(value || "")}
-                                    options={{
-                                        minimap: { enabled: false },
-                                        fontSize: 14,
-                                        lineNumbers: "on",
-                                        scrollBeyondLastLine: false,
-                                        automaticLayout: true,
-                                    }}
-                                />
+                        ) : !analysis ? (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                <p style={{ textAlign: "center", color: "#888" }}>Click a tab to analyze with AI</p>
                             </div>
-                        </>
-                    ) : (
-                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <p>Select a file to view and edit</p>
-                        </div>
-                    )}
+                        ) : (
+                            <>
+                                {activeTab === "security" && analysis.security_issues.map((issue, idx) => {
+                                    const severityColor = issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00";
+                                    return (
+                                        <div key={idx} style={{ 
+                                            padding: "1rem", 
+                                            backgroundColor: "transparent", 
+                                            border: `2px solid ${severityColor}`,
+                                            borderRadius: "8px",
+                                            color: "white"
+                                        }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                                                <span style={{ fontSize: "0.75rem", color: "#888" }}>{issue.file}</span>
+                                                <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: severityColor }}>
+                                                    {issue.severity.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>{issue.description}</div>
+                                            <div style={{ fontSize: "0.85rem", color: "#888" }}>💡 {issue.suggestion}</div>
+                                        </div>
+                                    );
+                                })}
+                                {activeTab === "code_quality" && analysis.code_quality_issues.map((issue, idx) => {
+                                    const severityColor = issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00";
+                                    return (
+                                        <div key={idx} style={{ 
+                                            padding: "1rem", 
+                                            backgroundColor: "transparent", 
+                                            border: `2px solid ${severityColor}`,
+                                            borderRadius: "8px",
+                                            color: "white"
+                                        }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                                                <span style={{ fontSize: "0.75rem", color: "#888" }}>{issue.file}</span>
+                                                <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: severityColor }}>
+                                                    {issue.severity.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>{issue.description}</div>
+                                            <div style={{ fontSize: "0.85rem", color: "#888" }}>💡 {issue.suggestion}</div>
+                                        </div>
+                                    );
+                                })}
+                                {activeTab === "performance" && analysis.performance_issues.map((issue, idx) => {
+                                    const severityColor = issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00";
+                                    return (
+                                        <div key={idx} style={{ 
+                                            padding: "1rem", 
+                                            backgroundColor: "transparent", 
+                                            border: `2px solid ${severityColor}`,
+                                            borderRadius: "8px",
+                                            color: "white"
+                                        }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                                                <span style={{ fontSize: "0.75rem", color: "#888" }}>{issue.file}</span>
+                                                <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: severityColor }}>
+                                                    {issue.severity.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>{issue.description}</div>
+                                            <div style={{ fontSize: "0.85rem", color: "#888" }}>💡 {issue.suggestion}</div>
+                                        </div>
+                                    );
+                                })}
+                                {activeTab === "security" && analysis.security_issues.length === 0 && (
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                        <p style={{ color: "#888" }}>No security issues found ✓</p>
+                                    </div>
+                                )}
+                                {activeTab === "code_quality" && analysis.code_quality_issues.length === 0 && (
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                        <p style={{ color: "#888" }}>No code quality issues found ✓</p>
+                                    </div>
+                                )}
+                                {activeTab === "performance" && analysis.performance_issues.length === 0 && (
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                        <p style={{ color: "#888" }}>No performance issues found ✓</p>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

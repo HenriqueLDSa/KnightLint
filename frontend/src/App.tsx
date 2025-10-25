@@ -1,5 +1,5 @@
 import { FaGithub } from "react-icons/fa";
-import "./css/App.css";
+import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import RepoSelect from "./components/RepoSelect";
 import RepoDashboard from "./components/RepoDashboard";

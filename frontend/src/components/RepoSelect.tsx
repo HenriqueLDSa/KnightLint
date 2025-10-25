@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "../css/App.css";
+import "../App.css";
 
 interface Repository {
     id: number;

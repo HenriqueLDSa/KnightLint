@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import "../css/App.css";
+import Editor from "@monaco-editor/react";
+import "../App.css";
 
 interface PRFile {
     filename: string;
@@ -24,6 +25,20 @@ interface PRDetails {
     files: PRFile[];
 }
 
+interface Issue {
+    severity: string;
+    description: string;
+    file: string;
+    suggestion: string;
+}
+
+interface Analysis {
+    security_issues: Issue[];
+    code_quality_issues: Issue[];
+    performance_issues: Issue[];
+    summary: string;
+}
+
 export default function PREditor() {
     const { repoName, prNumber } = useParams<{ repoName: string; prNumber: string }>();
     const [searchParams] = useSearchParams();
@@ -36,6 +51,9 @@ export default function PREditor() {
     const [fileContent, setFileContent] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [analysis, setAnalysis] = useState<Analysis | null>(null);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [committing, setCommitting] = useState(false);
 
     useEffect(() => {
         if (!token || !username) {
@@ -97,6 +115,80 @@ export default function PREditor() {
         }
     };
 
+    const analyzePR = async () => {
+        setAnalyzing(true);
+        try {
+            const response = await fetch(
+                `http://localhost:8000/analyze-pr?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`,
+                { method: "POST" }
+            );
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                alert(errorData.error || "Failed to analyze PR");
+                return;
+            }
+            const data = await response.json();
+            setAnalysis(data.analysis);
+        } catch (err) {
+            console.error("Failed to analyze PR:", err);
+            alert("An error occurred while analyzing the PR.");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
+    const commitChanges = async () => {
+        if (!selectedFile) {
+            alert("Please select a file first");
+            return;
+        }
+
+        const commitMessage = prompt("Enter commit message:", `Update ${selectedFile.filename}`);
+        if (!commitMessage) return;
+
+        setCommitting(true);
+        try {
+            const response = await fetch(
+                `http://localhost:8000/commit-changes?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}&file_path=${encodeURIComponent(selectedFile.filename)}&content=${encodeURIComponent(fileContent)}&commit_message=${encodeURIComponent(commitMessage)}`,
+                { method: "POST" }
+            );
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                alert(errorData.error || "Failed to commit changes");
+                return;
+            }
+            alert("Changes committed successfully!");
+        } catch (err) {
+            console.error("Failed to commit changes:", err);
+            alert("An error occurred while committing changes.");
+        } finally {
+            setCommitting(false);
+        }
+    };
+
+    const recheckPR = async () => {
+        setAnalyzing(true);
+        try {
+            const response = await fetch(
+                `http://localhost:8000/recheck-pr?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`,
+                { method: "POST" }
+            );
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                alert(errorData.error || "Failed to recheck PR");
+                return;
+            }
+            const data = await response.json();
+            setAnalysis(data.analysis);
+            alert("PR rechecked successfully!");
+        } catch (err) {
+            console.error("Failed to recheck PR:", err);
+            alert("An error occurred while rechecking the PR.");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     if (loading) {
         return (
             <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#0D0827", color: "white" }}>
@@ -122,7 +214,7 @@ export default function PREditor() {
     }
 
     return (
-        <div style={{ minHeight: "100vh", backgroundColor: "#0D0827", color: "white" }}>
+        <div style={{ minHeight: "100vh", backgroundColor: "#0D0827", color: "white", display: "flex", flexDirection: "column" }}>
             {/* Header */}
             <div style={{ padding: "1rem 2rem", borderBottom: "1px solid #3C3C5C", position: "relative" }}>
                 <button
@@ -160,8 +252,131 @@ export default function PREditor() {
                 </p>
             </div>
 
-            <div style={{ display: "flex", height: "calc(100vh - 120px)" }}>
-                {/* Sidebar with file list */}
+            <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                {/* Left sidebar: AI Analysis */}
+                <div style={{ width: "350px", borderRight: "1px solid #3C3C5C", overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column" }}>
+                    <div style={{ marginBottom: "1rem" }}>
+                        <button
+                            onClick={analyzePR}
+                            disabled={analyzing}
+                            style={{
+                                width: "100%",
+                                backgroundColor: analyzing ? "#555" : "#646cff",
+                                border: "none",
+                                color: "white",
+                                padding: "0.75rem",
+                                borderRadius: "8px",
+                                cursor: analyzing ? "not-allowed" : "pointer",
+                                fontFamily: "Jersey 20, sans-serif",
+                                fontSize: "1rem",
+                                marginBottom: "0.5rem"
+                            }}
+                        >
+                            {analyzing ? "Analyzing..." : "🔍 Analyze with AI"}
+                        </button>
+                        <button
+                            onClick={recheckPR}
+                            disabled={analyzing}
+                            style={{
+                                width: "100%",
+                                backgroundColor: analyzing ? "#555" : "transparent",
+                                border: "1px solid #3C3C5C",
+                                color: "white",
+                                padding: "0.75rem",
+                                borderRadius: "8px",
+                                cursor: analyzing ? "not-allowed" : "pointer",
+                                fontFamily: "Jersey 20, sans-serif",
+                                fontSize: "1rem"
+                            }}
+                        >
+                            {analyzing ? "Rechecking..." : "🔄 Recheck PR"}
+                        </button>
+                    </div>
+
+                    {analysis && (
+                        <div style={{ flex: 1, overflowY: "auto" }}>
+                            <h3 style={{ fontFamily: "Jersey 20, sans-serif", marginBottom: "1rem", fontSize: "1.3rem" }}>
+                                AI Analysis
+                            </h3>
+
+                            {/* Summary */}
+                            {analysis.summary && (
+                                <div style={{ marginBottom: "1.5rem", padding: "1rem", backgroundColor: "#1a1a2e", borderRadius: "8px" }}>
+                                    <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#646cff" }}>Summary</h4>
+                                    <p style={{ fontSize: "0.85rem", color: "#ccc" }}>{analysis.summary}</p>
+                                </div>
+                            )}
+
+                            {/* Security Issues */}
+                            <div style={{ marginBottom: "1.5rem" }}>
+                                <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#ff6b6b" }}>
+                                    🔒 Security Issues ({analysis.security_issues.length})
+                                </h4>
+                                {analysis.security_issues.length === 0 ? (
+                                    <p style={{ fontSize: "0.85rem", color: "#888" }}>No issues found</p>
+                                ) : (
+                                    analysis.security_issues.map((issue, idx) => (
+                                        <div key={idx} style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#1a1a2e", borderRadius: "8px", borderLeft: `3px solid ${issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00"}` }}>
+                                            <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: "0.25rem" }}>
+                                                {issue.file} • {issue.severity.toUpperCase()}
+                                            </div>
+                                            <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>{issue.description}</div>
+                                            <div style={{ fontSize: "0.8rem", color: "#4ade80" }}>💡 {issue.suggestion}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Code Quality Issues */}
+                            <div style={{ marginBottom: "1.5rem" }}>
+                                <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#ffa500" }}>
+                                    ✨ Code Quality ({analysis.code_quality_issues.length})
+                                </h4>
+                                {analysis.code_quality_issues.length === 0 ? (
+                                    <p style={{ fontSize: "0.85rem", color: "#888" }}>No issues found</p>
+                                ) : (
+                                    analysis.code_quality_issues.map((issue, idx) => (
+                                        <div key={idx} style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#1a1a2e", borderRadius: "8px", borderLeft: `3px solid ${issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00"}` }}>
+                                            <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: "0.25rem" }}>
+                                                {issue.file} • {issue.severity.toUpperCase()}
+                                            </div>
+                                            <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>{issue.description}</div>
+                                            <div style={{ fontSize: "0.8rem", color: "#4ade80" }}>💡 {issue.suggestion}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Performance Issues */}
+                            <div style={{ marginBottom: "1.5rem" }}>
+                                <h4 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "#4ade80" }}>
+                                    ⚡ Performance ({analysis.performance_issues.length})
+                                </h4>
+                                {analysis.performance_issues.length === 0 ? (
+                                    <p style={{ fontSize: "0.85rem", color: "#888" }}>No issues found</p>
+                                ) : (
+                                    analysis.performance_issues.map((issue, idx) => (
+                                        <div key={idx} style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#1a1a2e", borderRadius: "8px", borderLeft: `3px solid ${issue.severity === "high" ? "#ff6b6b" : issue.severity === "medium" ? "#ffa500" : "#ffff00"}` }}>
+                                            <div style={{ fontSize: "0.75rem", color: "#888", marginBottom: "0.25rem" }}>
+                                                {issue.file} • {issue.severity.toUpperCase()}
+                                            </div>
+                                            <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>{issue.description}</div>
+                                            <div style={{ fontSize: "0.8rem", color: "#4ade80" }}>💡 {issue.suggestion}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {!analysis && !analyzing && (
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>
+                            <p style={{ textAlign: "center" }}>Click "Analyze with AI" to get AI-powered code review</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Middle: File list */}
                 <div style={{ width: "300px", borderRight: "1px solid #3C3C5C", overflowY: "auto", padding: "1rem" }}>
                     <h3 style={{ fontFamily: "Jersey 20, sans-serif", marginBottom: "1rem" }}>
                         Files Changed ({prDetails.files.length})
@@ -190,35 +405,49 @@ export default function PREditor() {
                     ))}
                 </div>
 
-                {/* Editor */}
-                <div style={{ flex: 1, padding: "1rem" }}>
+                {/* Right: Editor */}
+                <div style={{ flex: 1, padding: "1rem", display: "flex", flexDirection: "column" }}>
                     {selectedFile ? (
-                        <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                            <div style={{ marginBottom: "0.5rem", fontFamily: "Jersey 20, sans-serif" }}>
-                                Editing: {selectedFile.filename}
+                        <>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem", fontFamily: "Jersey 20, sans-serif" }}>
+                                <div>Editing: {selectedFile.filename}</div>
+                                <button
+                                    onClick={commitChanges}
+                                    disabled={committing}
+                                    style={{
+                                        backgroundColor: committing ? "#555" : "#4ade80",
+                                        border: "none",
+                                        color: "#0D0827",
+                                        padding: "0.5rem 1rem",
+                                        borderRadius: "8px",
+                                        cursor: committing ? "not-allowed" : "pointer",
+                                        fontFamily: "Jersey 20, sans-serif",
+                                        fontSize: "0.9rem",
+                                        fontWeight: "bold"
+                                    }}
+                                >
+                                    {committing ? "Committing..." : "💾 Commit Changes"}
+                                </button>
                             </div>
-                            <textarea
-                                value={fileContent}
-                                onChange={(e) => setFileContent(e.target.value)}
-                                style={{
-                                    flex: 1,
-                                    width: "100%",
-                                    backgroundColor: "#1e1e1e",
-                                    color: "#d4d4d4",
-                                    border: "1px solid #3C3C5C",
-                                    borderRadius: "8px",
-                                    padding: "1rem",
-                                    fontFamily: "monospace",
-                                    fontSize: "14px",
-                                    lineHeight: "1.5",
-                                    resize: "none",
-                                    outline: "none",
-                                }}
-                                spellCheck={false}
-                            />
-                        </div>
+                            <div style={{ flex: 1, border: "1px solid #3C3C5C", borderRadius: "8px", overflow: "hidden" }}>
+                                <Editor
+                                    height="100%"
+                                    defaultLanguage={selectedFile.filename.split('.').pop() || "plaintext"}
+                                    theme="vs-dark"
+                                    value={fileContent}
+                                    onChange={(value) => setFileContent(value || "")}
+                                    options={{
+                                        minimap: { enabled: false },
+                                        fontSize: 14,
+                                        lineNumbers: "on",
+                                        scrollBeyondLastLine: false,
+                                        automaticLayout: true,
+                                    }}
+                                />
+                            </div>
+                        </>
                     ) : (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <p>Select a file to view and edit</p>
                         </div>
                     )}

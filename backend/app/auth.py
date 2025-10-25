@@ -1,11 +1,8 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
 import httpx
 import os
 from dotenv import load_dotenv
-from app.database import get_db
-from app import crud
 import logging
 from fastapi import Query
 from fastapi.responses import JSONResponse
@@ -23,13 +20,13 @@ GITHUB_REDIRECT_URI = os.getenv("GITHUB_REDIRECT_URI")
 async def github_login():
     url = (
         f"https://github.com/login/oauth/authorize"
-        f"?client_id={GITHUB_CLIENT_ID}&redirect_uri={GITHUB_REDIRECT_URI}&scope=read:user"
+        f"?client_id={GITHUB_CLIENT_ID}&redirect_uri={GITHUB_REDIRECT_URI}&scope=repo user"
     )
     return RedirectResponse(url)
 
 
 @router.get("/login/callback")
-async def github_callback(code: str, db: Session = Depends(get_db)):
+async def github_callback(code: str):
     # Exchange code for access token
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
@@ -66,6 +63,45 @@ async def github_callback(code: str, db: Session = Depends(get_db)):
     frontend_url = f"http://localhost:5173/select-repo?token={access_token}&username={user['login']}"
     return RedirectResponse(url=frontend_url)
 
+@router.get("/user-repos")
+async def get_user_repos(token: str = Query(...), username: str = Query(...)):
+    # Validate token and username are not empty
+    if not token or not username:
+        return JSONResponse(
+            {"error": "Missing authentication. Please log in again."},
+            status_code=401
+        )
+    
+    async with httpx.AsyncClient() as client:
+        repos_resp = await client.get(
+            "https://api.github.com/user/repos",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"sort": "updated", "per_page": 100, "affiliation": "owner"}
+        )
+
+        if repos_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch repositories."},
+                status_code=repos_resp.status_code
+            )
+
+        repos = repos_resp.json()
+
+        # Return formatted repository data
+        formatted_repos = [
+            {
+                "id": repo["id"],
+                "name": repo["name"],
+                "description": repo.get("description", ""),
+                "language": repo.get("language", ""),
+                "updated_at": repo["updated_at"],
+                "url": repo["html_url"]
+            }
+            for repo in repos
+        ]
+
+        return {"repositories": formatted_repos}
+
 # Endpoint to verify a repo and return its info if exists
 from fastapi import Query
 from fastapi.responses import JSONResponse
@@ -88,6 +124,7 @@ async def verify_repo(request: Request, repo_name: str = Query(...)):
         repos = repos_resp.json()
         repo_names_list = [repo.get("name", "") for repo in repos]
         logging.debug(f"Retrieved repos: {repo_names_list}")
+        print(repos)
 
         repo_name_lower = repo_name.lower()
         matched_repo = None
@@ -146,3 +183,310 @@ async def get_repo_pull_requests(token: str = Query(...), username: str = Query(
         ]
 
         return {"pull_requests": formatted_prs}
+
+@router.get("/pr-details")
+async def get_pr_details(token: str = Query(...), username: str = Query(...), repo_name: str = Query(...), pr_number: int = Query(...)):
+    # Validate token and username are not empty
+    if not token or not username:
+        return JSONResponse(
+            {"error": "Missing authentication. Please log in again."},
+            status_code=401
+        )
+    
+    async with httpx.AsyncClient() as client:
+        # Fetch PR details
+        pr_resp = await client.get(
+            f"https://api.github.com/repos/{username}/{repo_name}/pulls/{pr_number}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        if pr_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch PR details."},
+                status_code=pr_resp.status_code
+            )
+
+        pr_data = pr_resp.json()
+
+        # Fetch PR files
+        files_resp = await client.get(
+            f"https://api.github.com/repos/{username}/{repo_name}/pulls/{pr_number}/files",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        if files_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch PR files."},
+                status_code=files_resp.status_code
+            )
+
+        files = files_resp.json()
+
+        # Format response
+        return {
+            "number": pr_data["number"],
+            "title": pr_data["title"],
+            "body": pr_data.get("body", ""),
+            "user": pr_data["user"]["login"],
+            "state": pr_data["state"],
+            "created_at": pr_data["created_at"],
+            "updated_at": pr_data["updated_at"],
+            "html_url": pr_data["html_url"],
+            "files": [
+                {
+                    "filename": file["filename"],
+                    "status": file["status"],
+                    "additions": file["additions"],
+                    "deletions": file["deletions"],
+                    "changes": file["changes"],
+                    "patch": file.get("patch", ""),
+                    "raw_url": file["raw_url"]
+                }
+                for file in files
+            ]
+        }
+
+@router.get("/file-content")
+async def get_file_content(token: str = Query(...), raw_url: str = Query(...)):
+    # Validate token is not empty
+    if not token:
+        return JSONResponse(
+            {"error": "Missing authentication. Please log in again."},
+            status_code=401
+        )
+    
+    async with httpx.AsyncClient() as client:
+        # Fetch the raw file content from GitHub
+        file_resp = await client.get(
+            raw_url,
+            headers={"Authorization": f"Bearer {token}"},
+            follow_redirects=True
+        )
+
+        if file_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch file content."},
+                status_code=file_resp.status_code
+            )
+
+        return {"content": file_resp.text}
+
+@router.post("/analyze-pr")
+async def analyze_pr(token: str = Query(...), username: str = Query(...), repo_name: str = Query(...), pr_number: int = Query(...)):
+    """
+    Analyze a PR using Gemini API.
+    Fetches PR diff and files, sends to Gemini for structured analysis.
+    """
+    if not token or not username:
+        return JSONResponse(
+            {"error": "Missing authentication. Please log in again."},
+            status_code=401
+        )
+    
+    import json
+    
+    # Configure Gemini API
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        return JSONResponse(
+            {"error": "Gemini API key not configured on server."},
+            status_code=500
+        )
+    
+    async with httpx.AsyncClient() as client:
+        # Fetch PR details
+        pr_resp = await client.get(
+            f"https://api.github.com/repos/{username}/{repo_name}/pulls/{pr_number}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if pr_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch PR details."},
+                status_code=pr_resp.status_code
+            )
+        
+        pr_data = pr_resp.json()
+        
+        # Fetch PR files and diffs
+        files_resp = await client.get(
+            f"https://api.github.com/repos/{username}/{repo_name}/pulls/{pr_number}/files",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if files_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch PR files."},
+                status_code=files_resp.status_code
+            )
+        
+        files = files_resp.json()
+        
+        # Build prompt for Gemini
+        files_info = ""
+        for file in files:
+            files_info += f"\n\n## File: {file['filename']}\n"
+            files_info += f"Status: {file['status']}\n"
+            files_info += f"Changes: +{file['additions']} -{file['deletions']}\n"
+            if file.get('patch'):
+                files_info += f"Diff:\n```\n{file['patch']}\n```\n"
+        
+        prompt = f"""
+You are a senior code reviewer. Analyze the following Pull Request and provide a structured review.
+
+PR Title: {pr_data['title']}
+PR Description: {pr_data.get('body', 'No description provided')}
+
+Files Changed:
+{files_info}
+
+Please provide your analysis in the following JSON format:
+{{
+  "security_issues": [
+    {{"severity": "high|medium|low", "description": "issue description", "file": "filename", "suggestion": "how to fix"}}
+  ],
+  "code_quality_issues": [
+    {{"severity": "high|medium|low", "description": "issue description", "file": "filename", "suggestion": "how to fix"}}
+  ],
+  "performance_issues": [
+    {{"severity": "high|medium|low", "description": "issue description", "file": "filename", "suggestion": "how to fix"}}
+  ],
+  "summary": "A brief overall summary of the PR quality"
+}}
+
+If no issues are found in a category, return an empty array for that category.
+"""
+        
+        try:
+            # Use Gemini REST API directly matching the curl example
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+            
+            headers = {
+                'Content-Type': 'application/json',
+                'X-goog-api-key': gemini_api_key
+            }
+            
+            gemini_payload = {
+                "contents": [{
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }]
+            }
+            
+            gemini_response = await client.post(gemini_url, json=gemini_payload, headers=headers, timeout=60.0)
+            
+            if gemini_response.status_code != 200:
+                logging.error(f"Gemini API error: {gemini_response.status_code} {gemini_response.text}")
+                return JSONResponse(
+                    {"error": f"Gemini API error: {gemini_response.status_code} {gemini_response.text}"},
+                    status_code=500
+                )
+            
+            gemini_data = gemini_response.json()
+            response_text = gemini_data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '').strip()
+            
+            # Try to extract JSON from the response
+            # Sometimes Gemini wraps JSON in markdown code blocks
+            if response_text.startswith("```json"):
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif response_text.startswith("```"):
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+            
+            analysis = json.loads(response_text)
+            
+            return {
+                "pr_number": pr_number,
+                "pr_title": pr_data['title'],
+                "analysis": analysis
+            }
+            
+        except Exception as e:
+            logging.error(f"Gemini API error: {str(e)}")
+            return JSONResponse(
+                {"error": f"Failed to analyze PR with AI: {str(e)}"},
+                status_code=500
+            )
+
+@router.post("/commit-changes")
+async def commit_changes(
+    token: str = Query(...), 
+    username: str = Query(...), 
+    repo_name: str = Query(...), 
+    pr_number: int = Query(...),
+    file_path: str = Query(...),
+    content: str = Query(...),
+    commit_message: str = Query(...)
+):
+    """
+    Commit changes to a file in a PR.
+    """
+    if not token or not username:
+        return JSONResponse(
+            {"error": "Missing authentication. Please log in again."},
+            status_code=401
+        )
+    
+    async with httpx.AsyncClient() as client:
+        # Get PR details to find the branch
+        pr_resp = await client.get(
+            f"https://api.github.com/repos/{username}/{repo_name}/pulls/{pr_number}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if pr_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch PR details."},
+                status_code=pr_resp.status_code
+            )
+        
+        pr_data = pr_resp.json()
+        branch_name = pr_data['head']['ref']
+        
+        # Get current file SHA
+        file_resp = await client.get(
+            f"https://api.github.com/repos/{username}/{repo_name}/contents/{file_path}",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"ref": branch_name}
+        )
+        
+        if file_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch file details."},
+                status_code=file_resp.status_code
+            )
+        
+        file_data = file_resp.json()
+        file_sha = file_data['sha']
+        
+        # Encode content to base64
+        import base64
+        content_base64 = base64.b64encode(content.encode()).decode()
+        
+        # Update file
+        update_resp = await client.put(
+            f"https://api.github.com/repos/{username}/{repo_name}/contents/{file_path}",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "message": commit_message,
+                "content": content_base64,
+                "sha": file_sha,
+                "branch": branch_name
+            }
+        )
+        
+        if update_resp.status_code not in [200, 201]:
+            return JSONResponse(
+                {"error": "Failed to commit changes."},
+                status_code=update_resp.status_code
+            )
+        
+        return {"success": True, "commit": update_resp.json()}
+
+@router.post("/recheck-pr")
+async def recheck_pr(token: str = Query(...), username: str = Query(...), repo_name: str = Query(...), pr_number: int = Query(...)):
+    """
+    Re-run analysis on the latest commit of a PR.
+    This is essentially the same as analyze_pr but explicitly for rechecking.
+    """
+    return await analyze_pr(token=token, username=username, repo_name=repo_name, pr_number=pr_number)

@@ -3,8 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="PR Game API")
 
-# Allow frontend (React dev server) to talk to this API
-origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+# Allow frontend (React dev server + production) to talk to this API
+# Add your Railway frontend domain here after deployment
+origins = [
+    "http://localhost:5173", 
+    "http://127.0.0.1:5173",
+    # Add your Railway frontend URL here, e.g.:
+    # "https://your-frontend-name.up.railway.app"
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

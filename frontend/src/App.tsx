@@ -1,35 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { FaGithub } from "react-icons/fa";
+import "./css/App.css";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import RepoSelect from "./components/RepoSelect";
+import RepoDashboard from "./components/RepoDashboard";
 
-function App() {
-  const [count, setCount] = useState(0)
+function LandingPage() {
+  const handleGitHubLogin = () => {
+    window.location.href = "http://localhost:8000/login";
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="landing-container">
+      <h1 className="landing-title">Welcome to KnightLint</h1>
+
+      <button onClick={handleGitHubLogin} className="github-button">
+        <div className="github-button-icon">
+          <FaGithub size={60} color="#0D0827" />
+        </div>
+        <span className="github-button-text">Sign In With Github</span>
+      </button>
+    </div>
+  );
 }
 
-export default App
+function App() {
+  return (
+    <Router>
+      <Routes>
+        {/* 👇 Landing page */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* 👇 After login */}
+        <Route path="/select-repo" element={<RepoSelect />} />
+
+        {/* 👇 Repo dashboard page */}
+        <Route path="/repo/:repoName" element={<RepoDashboard />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;

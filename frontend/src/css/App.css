@@ -1,0 +1,90 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+
+/* Full page container */
+.landing-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #0D0827;
+  color: white;
+  text-align: center;
+}
+
+
+
+/* GitHub button */
+.github-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: white;
+  margin-top: 1rem;
+}
+
+.github-button-icon {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 50%;
+}
+
+.github-button-text {
+  font-family: "Jersey 20", sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: 6px;
+}
+
+.landing-title {
+  font-family: "Jersey 20", sans-serif;
+  font-size: 3rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  letter-spacing: 10px;
+}

@@ -44,14 +44,30 @@
 
 /* Full page container */
 .landing-container {
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  background-image: url('/landing_page_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-color: #0D0827;
   color: white;
   text-align: center;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+/* Knight mascot */
+.knight-mascot {
+  width: 140px;
+  height: auto;
+  margin-bottom: 1rem;
 }
 
 
@@ -59,26 +75,52 @@
 /* GitHub button */
 .github-button {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 0.75rem;
-  background: none;
-  border: none;
+  background-color: transparent;
+  border: 2px solid #6B46C1;
   cursor: pointer;
   color: white;
-  margin-top: 1rem;
+  margin-top: 2rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.github-button:hover {
+  background-color: rgba(107, 70, 193, 0.1);
+  border-color: #8B5CF6;
 }
 
 .github-button-icon {
-  background-color: white;
-  padding: 1rem;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .github-button-text {
-  font-family: "Jersey 20", sans-serif;
-  font-size: 1.25rem;
-  letter-spacing: 6px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.how-it-works-link {
+  position: absolute;
+  bottom: 2rem;
+  color: #8B5CF6;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.how-it-works-link:hover {
+  color: #a78bfa;
+  border-bottom: 2px solid #a78bfa;
 }
 
 .landing-title {
@@ -90,11 +132,20 @@
   animation: bounce 2s ease-in-out infinite;
 }
 
+.landing-title-first {
+  font-family: "Jersey 20", sans-serif;
+  font-size: 5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  letter-spacing: 25px;
+  animation: bounce 2s ease-in-out infinite;
+}
+
 @keyframes bounce {
   0%, 100% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-20px);
+    transform: translateY(-10px);
   }
 }

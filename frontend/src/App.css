@@ -66,11 +66,30 @@
   left: 0;
 }
 
+.how-it-works-link {
+  position: absolute;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #8B5CF6;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+  z-index: 10;
+}
+
+.how-it-works-link:hover {
+  color: #a78bfa;
+  border-bottom: 2px solid #a78bfa;
+}
+
 /* Knight mascot */
 .knight-mascot {
   width: 140px;
   height: auto;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
 }
 
 
@@ -98,32 +117,16 @@
 }
 
 .github-button-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
 .github-button-text {
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.how-it-works-link {
-  position: absolute;
-  bottom: 2rem;
-  color: #8B5CF6;
-  text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
-  transition: all 0.3s ease;
-  border-bottom: 2px solid transparent;
-}
-
-.how-it-works-link:hover {
-  color: #a78bfa;
-  border-bottom: 2px solid #a78bfa;
+  letter-spacing: 0;
 }
 
 .landing-title {
@@ -138,10 +141,38 @@
 .landing-title-first {
   font-family: "Jersey 20", sans-serif;
   font-size: 5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
   text-align: center;
   letter-spacing: 25px;
   animation: bounce 2s ease-in-out infinite;
+}
+
+.landing-subtitle {
+  font-family: "Jersey 20", sans-serif;
+  font-size: 1.6rem;
+  margin-top: 3rem;
+  margin-bottom: 3.5rem;
+  color: #d1d5db;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+
+/* GitHub button */
+.github-button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: transparent;
+  border: 2px solid #6B46C1;
+  cursor: pointer;
+  color: white;
+  margin-top: 1rem;
+  padding: 0.75rem 2rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
 @keyframes bounce {

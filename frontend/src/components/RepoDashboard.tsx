@@ -94,7 +94,7 @@ export default function RepoDashboard() {
                     ← Back to repositories
                 </button>
                 <h1 className="repo-dashboard-title">
-                    {repoName}
+                    <span className="bouncing-text">{repoName}</span>
                 </h1>
             </div>
 

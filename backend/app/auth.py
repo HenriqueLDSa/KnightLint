@@ -159,7 +159,8 @@ async def get_repo_pull_requests(token: str = Query(...), username: str = Query(
     async with httpx.AsyncClient() as client:
         pr_resp = await client.get(
             f"https://api.github.com/repos/{username}/{repo_name}/pulls",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
+            params={"state": "all", "per_page": 100}
         )
 
         if pr_resp.status_code != 200:
@@ -170,18 +171,37 @@ async def get_repo_pull_requests(token: str = Query(...), username: str = Query(
 
         prs = pr_resp.json()
 
-        # return only relevant fields for frontend
-        formatted_prs = [
-            {
+        # Fetch detailed info for each PR to get changed_files count
+        formatted_prs = []
+        for pr in prs:
+            # Fetch individual PR details to get changed_files
+            pr_detail_resp = await client.get(
+                f"https://api.github.com/repos/{username}/{repo_name}/pulls/{pr['number']}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            
+            if pr_detail_resp.status_code == 200:
+                pr_detail = pr_detail_resp.json()
+                changed_files = pr_detail.get("changed_files", 0)
+            else:
+                changed_files = 0
+            
+            formatted_prs.append({
                 "id": pr["id"],
                 "number": pr["number"],
                 "title": pr["title"],
                 "user": pr["user"]["login"],
                 "created_at": pr["created_at"],
-                "url": pr["html_url"]
-            }
-            for pr in prs
-        ]
+                "url": pr["html_url"],
+                "body": pr.get("body", ""),
+                "head": {
+                    "ref": pr["head"]["ref"]
+                } if pr.get("head") else None,
+                "base": {
+                    "ref": pr["base"]["ref"]
+                } if pr.get("base") else None,
+                "changed_files": changed_files
+            })
 
         return {"pull_requests": formatted_prs}
 

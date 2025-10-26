@@ -11,8 +11,6 @@ import logging
 from fastapi import Query
 from fastapi.responses import JSONResponse
 
-
-
 # Load env variables here
 load_dotenv()
 

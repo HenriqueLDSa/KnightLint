@@ -1,0 +1,269 @@
+/* PREditor Component Styles */
+
+.pr-editor-container {
+    height: 100vh;
+    width: 100vw;
+    background-color: #0D0827;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+.pr-editor-header {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #3C3C5C;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+    padding: 15px 10px 10px 10px;
+}
+
+.back-button {
+    background-color: transparent;
+    border: 1px solid #3C3C5C;
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Jersey 20', sans-serif;
+    font-size: 0.85rem;
+}
+
+.back-button:hover {
+    background-color: #1a1a2e;
+    border-color: #646cff;
+}
+
+.pr-title {
+    font-size: 1.2rem;
+    margin: 0;
+    animation: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pr-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.pr-meta {
+    color: #888;
+    font-size: 0.8rem;
+    margin: 0;
+    margin-left: auto;
+}
+
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: 0;
+}
+
+.left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #3C3C5C;
+    border-radius: 8px;
+    padding: 0.75rem;
+    min-height: 0;
+}
+
+.editor-label {
+    margin-bottom: 0.5rem;
+    font-family: 'Jersey 20', sans-serif;
+    font-size: 0.9rem;
+}
+
+.editor-wrapper {
+    flex: 1;
+    border: 1px solid #3C3C5C;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+    min-height: 0;
+}
+
+.editor-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.editor-button {
+    background-color: transparent;
+    border: 1px solid #3C3C5C;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Jersey 20', sans-serif;
+    font-size: 0.9rem;
+}
+
+.editor-button:disabled {
+    cursor: not-allowed;
+}
+
+.empty-editor {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.files-section {
+    height: 100px;
+    border: 1px solid #3C3C5C;
+    border-radius: 8px;
+    padding: 0.75rem;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.files-title {
+    font-family: 'Jersey 20', sans-serif;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    margin-top: 0;
+}
+
+.files-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.file-item {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    border: 1px solid #3C3C5C;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Jersey 20', sans-serif;
+    font-size: 0.85rem;
+}
+
+.file-item.selected {
+    border: 2px solid #646cff;
+}
+
+.right-panel {
+    width: 450px;
+    border: 1px solid #3C3C5C;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex-shrink: 0;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tab-button {
+    flex: 1;
+    background-color: transparent;
+    border: 1px solid #3C3C5C;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Jersey 20', sans-serif;
+    font-size: 0.9rem;
+}
+
+.tab-button.active {
+    border: 2px solid #646cff;
+}
+
+.issues-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.loading-state,
+.empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.empty-state p {
+    text-align: center;
+    color: #888;
+}
+
+.issue-box {
+    padding: 1rem;
+    background-color: transparent;
+    border-radius: 8px;
+    color: white;
+}
+
+.issue-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.issue-file {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.issue-severity {
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.issue-description {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+.issue-suggestion {
+    font-size: 0.85rem;
+    color: #888;
+    text-align: left;
+}
+
+.loading-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0D0827;
+    color: white;
+}
+
+.error-text {
+    color: #ff6b6b;
+}

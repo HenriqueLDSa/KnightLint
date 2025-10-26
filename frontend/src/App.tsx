@@ -1,9 +1,8 @@
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import RepoSelect from "./components/RepoSelect";
 import RepoDashboard from "./components/RepoDashboard";
 import PREditor from "./components/PREditor";
-import HowItWorks from "./components/HowItWorks";
 import { useState, useEffect } from "react";
 
 function LandingPage() {
@@ -42,10 +41,6 @@ function LandingPage() {
         <img src="/github-white-icon.webp" alt="GitHub" className="github-button-icon" />
         <span className="github-button-text">Sign in with Github</span>
       </button>
-
-      <Link to="/how-it-works" className="how-it-works-link">
-        How does KnightLint work?
-      </Link>
     </div>
   );
 }
@@ -56,9 +51,6 @@ function App() {
       <Routes>
         {/* 👇 Landing page */}
         <Route path="/" element={<LandingPage />} />
-
-        {/* 👇 How it works page */}
-        <Route path="/how-it-works" element={<HowItWorks />} />
 
         {/* 👇 After login */}
         <Route path="/select-repo" element={<RepoSelect />} />

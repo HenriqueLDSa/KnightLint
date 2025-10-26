@@ -90,7 +90,7 @@ export default function RepoDashboard() {
             <div className="repo-dashboard-header">
                 <button
                     className="rd-back-button"
-                    onClick={() => navigate(`/?token=${token}&username=${username}`)}
+                    onClick={() => navigate(`/select-repo?token=${token}&username=${username}`)}
                     aria-label="Back to repositories"
                 >
                     ← Back to repositories

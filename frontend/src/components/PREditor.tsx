@@ -239,7 +239,7 @@ export default function PREditor() {
                 >
                     ← Back to PRs
                 </button>
-                <h1 className="landing-title pr-title">
+                <h1 className="pr-title">
                     <img src="/favicon.ico" alt="PR" className="pr-icon" />
                     {prDetails.title}
                 </h1>

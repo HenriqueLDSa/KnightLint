@@ -1,0 +1,262 @@
+.how-it-works-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0D0827 0%, #1a0f3d 100%);
+  color: white;
+  padding: 0;
+  overflow-y: auto;
+}
+
+/* Back Button */
+.back-button-how {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: transparent;
+  border: 2px solid #6B46C1;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.back-button-how:hover {
+  background-color: rgba(107, 70, 193, 0.2);
+  border-color: #8B5CF6;
+}
+
+/* How Does KnightLint Work Section */
+.how-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 4rem 3rem 6rem 3rem;
+}
+
+.how-main-title {
+  font-family: "Jersey 20", sans-serif;
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 4rem;
+  letter-spacing: 8px;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.how-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: flex-start;
+}
+
+/* Left Side */
+.how-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.intro-box {
+  background: rgba(107, 70, 193, 0.2);
+  border: 2px solid #6B46C1;
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.intro-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #ffffff;
+  margin: 0;
+}
+
+.knight-illustration {
+  width: 100%;
+  max-width: 250px;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Right Side - Steps */
+.how-right {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 0;
+}
+
+.step-box {
+  background: rgba(107, 70, 193, 0.15);
+  border: 2px solid #6B46C1;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.step-circle {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #8B5CF6, #6B46C1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.step-text-box {
+  flex: 1;
+}
+
+.step-box-title {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+}
+
+.step-box-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #d1d5db;
+  margin: 0;
+}
+
+/* Why KnightLint Section */
+.why-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 3rem;
+}
+
+.why-title {
+  font-family: "Jersey 20", sans-serif;
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  letter-spacing: 8px;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.why-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 3rem 0;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.why-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid rgba(107, 70, 193, 0.3);
+}
+
+.why-item:last-child {
+  border-bottom: none;
+}
+
+.why-bullet {
+  font-size: 2rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.why-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #ffffff;
+}
+
+.why-text strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* GitHub Button */
+.github-button-how {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: transparent;
+  border: 2px solid #6B46C1;
+  cursor: pointer;
+  color: white;
+  padding: 0.75rem 2rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  margin: 0 auto;
+}
+
+.github-button-how:hover {
+  background-color: rgba(107, 70, 193, 0.2);
+  border-color: #8B5CF6;
+}
+
+.github-icon-how {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.github-text-how {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Bounce Animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .how-content-grid {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .how-main-title,
+  .why-title {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .how-main-title,
+  .why-title {
+    font-size: 2rem;
+    letter-spacing: 4px;
+  }
+
+  .step-box {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .why-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+}

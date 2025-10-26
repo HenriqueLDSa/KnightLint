@@ -198,7 +198,7 @@ export default function RepoSelect() {
     return (
         <div className="repo-select-container">
             <h1 className="repo-select-title">
-                Select a Repository
+                <span className="bouncing-text">Select a Repository</span>
             </h1>
 
             {error && (

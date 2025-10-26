@@ -2,9 +2,18 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    width: 60%;
+    width: 100vw;
     color: white;
     padding: 0;
+    background-image: url('/bg2.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-color: #0D0827;
+    position: fixed;
+    top: 0;
+    left: 0;
 }
 
 .repo-select-loading {
@@ -12,6 +21,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background-image: url('/bg2.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     background-color: #0D0827;
     color: white;
     font-size: 1.2rem;
@@ -29,6 +42,20 @@
     z-index: 10;
     margin: 0;
     border-bottom: 1px solid rgba(60, 60, 92, 0.3);
+}
+
+.bouncing-text {
+    display: inline-block;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .repo-select-error {
@@ -49,7 +76,8 @@
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    width: 100%;
+    width: 60%;
+    max-width: 1200px;
     padding: 2rem;
     margin: 0 auto;
     overflow-y: auto;

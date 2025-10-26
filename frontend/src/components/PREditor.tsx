@@ -57,6 +57,8 @@ export default function PREditor() {
     const [committing, setCommitting] = useState(false);
     const [activeTab, setActiveTab] = useState<"security" | "code_quality" | "performance">("security");
 
+    const backendBaseUrl = "https://backend-production-9cc8.up.railway.app";
+
     useEffect(() => {
         if (!token || !username) {
             setError("Authentication required. Please log in with GitHub again.");
@@ -68,7 +70,7 @@ export default function PREditor() {
             try {
                 console.log("Fetching PR details for:", { repoName, prNumber, username, tokenExists: !!token });
                 const res = await fetch(
-                    `http://localhost:8000/pr-details?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`
+                    `${backendBaseUrl}/pr-details?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`
                 );
                 console.log("PR details response status:", res.status);
                 if (!res.ok) {
@@ -102,7 +104,7 @@ export default function PREditor() {
         try {
             // Fetch file content through our backend to avoid CORS issues
             const response = await fetch(
-                `http://localhost:8000/file-content?token=${token}&raw_url=${encodeURIComponent(file.raw_url)}`
+                `${backendBaseUrl}/file-content?token=${token}&raw_url=${encodeURIComponent(file.raw_url)}`
             );
             if (!response.ok) {
                 console.error("Failed to load file content");
@@ -121,7 +123,7 @@ export default function PREditor() {
         setAnalyzing(true);
         try {
             const response = await fetch(
-                `http://localhost:8000/analyze-pr?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`,
+                `${backendBaseUrl}/analyze-pr?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`,
                 { method: "POST" }
             );
             if (!response.ok) {
@@ -156,7 +158,7 @@ export default function PREditor() {
         setCommitting(true);
         try {
             const response = await fetch(
-                `http://localhost:8000/commit-changes?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}&file_path=${encodeURIComponent(selectedFile.filename)}&content=${encodeURIComponent(fileContent)}&commit_message=${encodeURIComponent(commitMessage)}`,
+                `${backendBaseUrl}/commit-changes?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}&file_path=${encodeURIComponent(selectedFile.filename)}&content=${encodeURIComponent(fileContent)}&commit_message=${encodeURIComponent(commitMessage)}`,
                 { method: "POST" }
             );
             if (!response.ok) {
@@ -177,7 +179,7 @@ export default function PREditor() {
         setAnalyzing(true);
         try {
             const response = await fetch(
-                `http://localhost:8000/recheck-pr?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`,
+                `${backendBaseUrl}/recheck-pr?token=${token}&username=${username}&repo_name=${repoName}&pr_number=${prNumber}`,
                 { method: "POST" }
             );
             if (!response.ok) {

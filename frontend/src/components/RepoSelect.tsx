@@ -35,6 +35,8 @@ export default function RepoSelect() {
     const token = params.get("token") || "";
     const username = params.get("username") || "";
 
+    const backendBaseUrl = "https://backend-production-9cc8.up.railway.app";
+
     useEffect(() => {
         if (!token || !username) {
             setError("Authentication required. Please log in again.");
@@ -45,7 +47,7 @@ export default function RepoSelect() {
         const fetchRepos = async () => {
             try {
                 const res = await fetch(
-                    `http://localhost:8000/user-repos?token=${token}&username=${username}`
+                    `${backendBaseUrl}/user-repos?token=${token}&username=${username}`
                 );
                 if (!res.ok) {
                     const errorData = await res.json().catch(() => ({}));
@@ -68,7 +70,7 @@ export default function RepoSelect() {
                         try {
                             // Fetch PR stats
                             const prRes = await fetch(
-                                `http://localhost:8000/repo-pull-requests?token=${token}&username=${username}&repo_name=${repo.name}`
+                                `${backendBaseUrl}/repo-pull-requests?token=${token}&username=${username}&repo_name=${repo.name}`
                             );
                             if (prRes.ok) {
                                 const prData = await prRes.json();

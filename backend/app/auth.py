@@ -22,6 +22,8 @@ GITHUB_REDIRECT_URI = os.getenv("GITHUB_REDIRECT_URI")
 pr_analysis_cache: Dict[str, dict] = {}
 pr_issue_tracker: Dict[str, list] = {}
 
+frontend_base_url = "https://frontend-production-ee09.up.railway.app"
+
 
 @router.get("/login")
 async def github_login():
@@ -67,7 +69,7 @@ async def github_callback(code: str):
         repos = repos_resp.json()
         repo_names = [repo["name"] for repo in repos]
 
-    frontend_url = f"http://localhost:5173/select-repo?token={access_token}&username={user['login']}"
+    frontend_url = f"{frontend_base_url}/select-repo?token={access_token}&username={user['login']}"
     return RedirectResponse(url=frontend_url)
 
 @router.get("/user-repos")

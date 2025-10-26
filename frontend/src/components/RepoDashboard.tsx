@@ -31,6 +31,8 @@ export default function RepoDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const backendBaseUrl = "https://backend-production-9cc8.up.railway.app";
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         const month = date.getMonth() + 1;
@@ -50,7 +52,7 @@ export default function RepoDashboard() {
         const fetchPRs = async () => {
             try {
                 const res = await fetch(
-                    `http://localhost:8000/repo-pull-requests?token=${token}&username=${username}&repo_name=${repoName}`
+                    `${backendBaseUrl}/repo-pull-requests?token=${token}&username=${username}&repo_name=${repoName}`
                 );
                 if (!res.ok) {
                     const errorData = await res.json().catch(() => ({}));

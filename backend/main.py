@@ -11,6 +11,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:5173",
+    "https://frontend-production-ee09.up.railway.app"
 ]
 
 app.add_middleware(

@@ -7,13 +7,14 @@ import { useState, useEffect } from "react";
 
 function LandingPage() {
   const [knightImage, setKnightImage] = useState("/knight2.png");
+  const frontendBaseUrl = "https://frontend-production-ee09.up.railway.app";
 
   useEffect(() => {
     const blinkSequence = () => {
       // Blink once (switch to closed eyes briefly)
       setTimeout(() => setKnightImage("/knight1.png"), 0);
       setTimeout(() => setKnightImage("/knight2.png"), 300);
-      
+
       // Wait a few seconds, then blink again
       setTimeout(() => setKnightImage("/knight1.png"), 3500);
       setTimeout(() => setKnightImage("/knight2.png"), 3800);
@@ -29,7 +30,7 @@ function LandingPage() {
   }, []);
 
   const handleGitHubLogin = () => {
-    window.location.href = "http://localhost:8000/login";
+    window.location.href = `${frontendBaseUrl}/login`;
   };
 
   return (

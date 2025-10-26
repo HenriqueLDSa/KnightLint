@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-import "./css/RepoSelect.css";
+import "../css/RepoSelect.css";
 
 interface Repository {
     id: number;

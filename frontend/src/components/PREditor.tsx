@@ -81,7 +81,7 @@ export default function PREditor() {
                 const data = await res.json();
                 console.log("PR details data:", data);
                 setPrDetails(data);
-                
+
                 // Auto-select first file if available
                 if (data.files && data.files.length > 0) {
                     await loadFileContent(data.files[0]);
@@ -131,6 +131,11 @@ export default function PREditor() {
             }
             const data = await response.json();
             setAnalysis(data.analysis);
+            if (data.cached) {
+                console.log("Used cached analysis - results are from previous analysis");
+            } else {
+                console.log("Fresh AI analysis completed");
+            }
         } catch (err) {
             console.error("Failed to analyze PR:", err);
             alert("An error occurred while analyzing the PR.");
@@ -181,6 +186,13 @@ export default function PREditor() {
                 return;
             }
             const data = await response.json();
+
+            // Check if there were no changes
+            if (data.no_changes) {
+                alert("No changes were made in the file. Review the issues and make appropriate changes to resolve the conflicts.");
+                return;
+            }
+
             setAnalysis(data.analysis);
             alert("PR rechecked successfully!");
         } catch (err) {
@@ -247,20 +259,20 @@ export default function PREditor() {
                                 <div className="editor-wrapper">
                                     <Editor
                                         height="100%"
-                                        language={selectedFile.filename.endsWith('.py') ? 'python' : 
-                                                 selectedFile.filename.endsWith('.js') ? 'javascript' :
-                                                 selectedFile.filename.endsWith('.ts') ? 'typescript' :
-                                                 selectedFile.filename.endsWith('.tsx') ? 'typescript' :
-                                                 selectedFile.filename.endsWith('.jsx') ? 'javascript' :
-                                                 selectedFile.filename.endsWith('.json') ? 'json' :
-                                                 selectedFile.filename.endsWith('.html') ? 'html' :
-                                                 selectedFile.filename.endsWith('.css') ? 'css' :
-                                                 selectedFile.filename.endsWith('.java') ? 'java' :
-                                                 selectedFile.filename.endsWith('.cpp') || selectedFile.filename.endsWith('.c') ? 'cpp' :
-                                                 selectedFile.filename.endsWith('.go') ? 'go' :
-                                                 selectedFile.filename.endsWith('.rs') ? 'rust' :
-                                                 selectedFile.filename.endsWith('.md') ? 'markdown' :
-                                                 'plaintext'}
+                                        language={selectedFile.filename.endsWith('.py') ? 'python' :
+                                            selectedFile.filename.endsWith('.js') ? 'javascript' :
+                                                selectedFile.filename.endsWith('.ts') ? 'typescript' :
+                                                    selectedFile.filename.endsWith('.tsx') ? 'typescript' :
+                                                        selectedFile.filename.endsWith('.jsx') ? 'javascript' :
+                                                            selectedFile.filename.endsWith('.json') ? 'json' :
+                                                                selectedFile.filename.endsWith('.html') ? 'html' :
+                                                                    selectedFile.filename.endsWith('.css') ? 'css' :
+                                                                        selectedFile.filename.endsWith('.java') ? 'java' :
+                                                                            selectedFile.filename.endsWith('.cpp') || selectedFile.filename.endsWith('.c') ? 'cpp' :
+                                                                                selectedFile.filename.endsWith('.go') ? 'go' :
+                                                                                    selectedFile.filename.endsWith('.rs') ? 'rust' :
+                                                                                        selectedFile.filename.endsWith('.md') ? 'markdown' :
+                                                                                            'plaintext'}
                                         theme="vs-dark"
                                         value={fileContent}
                                         onChange={(value) => setFileContent(value || "")}

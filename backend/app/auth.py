@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Request
+from typing import Dict
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 import httpx
 import os
@@ -15,6 +16,12 @@ router = APIRouter()
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 GITHUB_REDIRECT_URI = os.getenv("GITHUB_REDIRECT_URI")
+
+# In-memory cache (use Redis/DB for production)
+# Changed to store both analysis and commit SHA
+pr_analysis_cache: Dict[str, dict] = {}
+pr_issue_tracker: Dict[str, list] = {}
+
 
 @router.get("/login")
 async def github_login():
@@ -291,6 +298,40 @@ async def get_file_content(token: str = Query(...), raw_url: str = Query(...)):
             )
 
         return {"content": file_resp.text}
+    
+def generate_issue_id(issue: dict) -> str:
+    """Generate a stable ID for an issue based on file, description"""
+    import hashlib
+    key = f"{issue['file']}:{issue['description'][:100]}"
+    return hashlib.md5(key.encode()).hexdigest()[:12]
+
+def merge_issues_with_history(new_issues: list, category: str, cache_key: str) -> list:
+    """Merge new issues with historical severity ratings"""
+    if cache_key not in pr_issue_tracker:
+        pr_issue_tracker[cache_key] = {}
+    
+    tracker = pr_issue_tracker[cache_key]
+    merged_issues = []
+    
+    for issue in new_issues:
+        issue_id = generate_issue_id(issue)
+        
+        # If we've seen this issue before, use the original severity
+        if issue_id in tracker:
+            issue['severity'] = tracker[issue_id]['severity']
+            issue['first_seen'] = tracker[issue_id]['first_seen']
+        else:
+            # New issue - track it
+            tracker[issue_id] = {
+                'severity': issue['severity'],
+                'first_seen': issue.get('first_seen', 'current'),
+                'category': category
+            }
+            issue['first_seen'] = 'current'
+        
+        merged_issues.append(issue)
+    
+    return merged_issues
 
 @router.post("/analyze-pr")
 async def analyze_pr(token: str = Query(...), username: str = Query(...), repo_name: str = Query(...), pr_number: int = Query(...)):
@@ -305,6 +346,7 @@ async def analyze_pr(token: str = Query(...), username: str = Query(...), repo_n
         )
     
     import json
+    import asyncio
     
     # Configure Gemini API
     gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -328,6 +370,27 @@ async def analyze_pr(token: str = Query(...), username: str = Query(...), repo_n
             )
         
         pr_data = pr_resp.json()
+        
+        # Get the latest commit SHA to use as cache key
+        head_sha = pr_data['head']['sha']
+        cache_key = f"{username}:{repo_name}:{pr_number}:{head_sha}"
+        
+        # Check cache first
+        if cache_key in pr_analysis_cache:
+            logging.info(f"Returning cached analysis for {cache_key}")
+            return {
+                "pr_number": pr_number,
+                "pr_title": pr_data['title'],
+                "analysis": pr_analysis_cache[cache_key]['analysis'],
+                "head_sha": head_sha,
+                "cached": True
+            }
+        
+        logging.info(f"Generating new analysis for {cache_key}")
+
+        # Right after getting the cache_key
+        logging.info(f"Current cache keys: {list(pr_analysis_cache.keys())}")
+        logging.info(f"Looking for key: {cache_key}")
         
         # Fetch PR files and diffs
         files_resp = await client.get(
@@ -361,40 +424,56 @@ PR Description: {pr_data.get('body', 'No description provided')}
 Files Changed:
 {files_info}
 
+IMPORTANT INSTRUCTIONS:
+- Assign severity levels (high/medium/low) consistently - the same type of issue should always receive the same severity
+- Include ALL types of issues related to actual code changes in the PR: syntax, security, performance, best practices, style, tests, etc.
+- If the PR description is vague or missing, include it as a code_quality_issue
+- If documentation is missing or inadequate, include it as a code_quality_issue
+- Always return valid JSON even if there are no issues (use empty arrays)
+- Issues with the PR title or description such as not providing enough context or missing shouldn't be counted as issues. Only issues in the code changes matter.
+
 Please provide your analysis in the following JSON format:
 {{
   "security_issues": [
-    {{"severity": "high|medium|low", "description": "issue description", "file": "filename", "suggestion": "how to fix"}}
+    {{"severity": "high|medium|low", "description": "issue description", "file": "filename or 'PR metadata'", "suggestion": "how to fix"}}
   ],
   "code_quality_issues": [
-    {{"severity": "high|medium|low", "description": "issue description", "file": "filename", "suggestion": "how to fix"}}
+    {{"severity": "high|medium|low", "description": "issue description", "file": "filename or 'PR metadata'", "suggestion": "how to fix"}}
   ],
   "performance_issues": [
-    {{"severity": "high|medium|low", "description": "issue description", "file": "filename", "suggestion": "how to fix"}}
+    {{"severity": "high|medium|low", "description": "issue description", "file": "filename or 'PR metadata'", "suggestion": "how to fix"}}
   ],
   "summary": "A brief overall summary of the PR quality"
 }}
 
 If no issues are found in a category, return an empty array for that category.
+You MUST return valid JSON in this exact format.
+I just need the JSON response, do not include any other text, or impressions, personal opinions, or commentary outside the JSON structure.
 """
         
         try:
             # Use Gemini REST API directly matching the curl example
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-            
+    
             headers = {
                 'Content-Type': 'application/json',
                 'X-goog-api-key': gemini_api_key
             }
-            
+    
             gemini_payload = {
                 "contents": [{
                     "parts": [{
                         "text": prompt
                     }]
-                }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.0,
+                    "topK": 1,
+                    "topP": 1.0,
+                    "candidateCount": 1,
+                }
             }
-            
+    
             gemini_response = await client.post(gemini_url, json=gemini_payload, headers=headers, timeout=60.0)
             
             if gemini_response.status_code != 200:
@@ -405,7 +484,19 @@ If no issues are found in a category, return an empty array for that category.
                 )
             
             gemini_data = gemini_response.json()
+            
+            # Extract response_text FIRST
             response_text = gemini_data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '').strip()
+            
+            # ADD LOGGING HERE
+            logging.info(f"Raw Gemini response: {response_text[:500]}")  # Log first 500 chars
+            
+            if not response_text:
+                logging.error("Empty response from Gemini API")
+                return JSONResponse(
+                    {"error": "Gemini returned an empty response"},
+                    status_code=500
+                )
             
             # Try to extract JSON from the response
             # Sometimes Gemini wraps JSON in markdown code blocks
@@ -414,21 +505,122 @@ If no issues are found in a category, return an empty array for that category.
             elif response_text.startswith("```"):
                 response_text = response_text.split("```")[1].split("```")[0].strip()
             
+            # ADD MORE LOGGING
+            logging.info(f"Cleaned response text: {response_text[:500]}")
+    
             analysis = json.loads(response_text)
+
+             # Validate the structure
+            if not isinstance(analysis, dict):
+                raise ValueError("Analysis is not a dictionary")
+            
+            # Ensure all required keys exist with default empty arrays
+            analysis.setdefault('security_issues', [])
+            analysis.setdefault('code_quality_issues', [])
+            analysis.setdefault('performance_issues', [])
+            analysis.setdefault('summary', 'No summary provided')
+            
+            # Merge with historical issue tracking
+            base_cache_key = f"{username}:{repo_name}:{pr_number}"
+            analysis['security_issues'] = merge_issues_with_history(
+                analysis.get('security_issues', []), 'security', base_cache_key
+            )
+            analysis['code_quality_issues'] = merge_issues_with_history(
+                analysis.get('code_quality_issues', []), 'code_quality', base_cache_key
+            )
+            analysis['performance_issues'] = merge_issues_with_history(
+                analysis.get('performance_issues', []), 'performance', base_cache_key
+            )
+
+            # Cache the result with commit SHA
+            pr_analysis_cache[cache_key] = {
+                'analysis': analysis,
+                'head_sha': head_sha
+            }
+            
+            total_issues = (
+                len(analysis['security_issues']) +
+                len(analysis['code_quality_issues']) +
+                len(analysis['performance_issues'])
+            )
             
             return {
                 "pr_number": pr_number,
                 "pr_title": pr_data['title'],
-                "analysis": analysis
+                "analysis": analysis,
+                "head_sha": head_sha,
+                "cached": False,
+                "total_issues": total_issues
             }
             
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decode error: {str(e)}")
+            logging.error(f"Response text was: {response_text[:1000]}")
+            
+            # Return a default structure instead of erroring
+            return {
+                "pr_number": pr_number,
+                "pr_title": pr_data['title'],
+                "analysis": {
+                    "security_issues": [],
+                    "code_quality_issues": [{
+                        "severity": "medium",
+                        "description": "AI analysis failed to complete. Please try again.",
+                        "file": "system",
+                        "suggestion": "Click 'Recheck PR' to retry the analysis."
+                    }],
+                    "performance_issues": [],
+                    "summary": "Analysis could not be completed due to a technical error."
+                },
+                "head_sha": head_sha,
+                "cached": False,
+                "error": "Analysis parsing failed"
+            }
+        
         except Exception as e:
-            logging.error(f"Gemini API error: {str(e)}")
-            return JSONResponse(
-                {"error": f"Failed to analyze PR with AI: {str(e)}"},
-                status_code=500
-            )
+            logging.error(f"Unexpected error during PR analysis: {str(e)}")
+            
+            # Return a default structure instead of erroring
+            return {
+                "pr_number": pr_number,
+                "pr_title": pr_data['title'],
+                "analysis": {
+                    "security_issues": [],
+                    "code_quality_issues": [{
+                        "severity": "medium",
+                        "description": f"AI analysis encountered an error: {str(e)}",
+                        "file": "system",
+                        "suggestion": "Please try again or contact support if the issue persists."
+                    }],
+                    "performance_issues": [],
+                    "summary": "Analysis could not be completed."
+                },
+                "head_sha": head_sha,
+                "cached": False,
+                "error": str(e)
+            }
+            
 
+
+    
+@router.post("/mark-issue-resolved")
+async def mark_issue_resolved(
+    token: str = Query(...),
+    username: str = Query(...),
+    repo_name: str = Query(...),
+    pr_number: int = Query(...),
+    issue_id: str = Query(...)
+):
+    """Remove an issue from tracking when it's actually resolved"""
+    base_cache_key = f"{username}:{repo_name}:{pr_number}"
+    
+    if base_cache_key in pr_issue_tracker:
+        if issue_id in pr_issue_tracker[base_cache_key]:
+            del pr_issue_tracker[base_cache_key][issue_id]
+            return {"success": True, "message": "Issue marked as resolved"}
+    
+    return {"success": False, "message": "Issue not found"}
+    
 @router.post("/commit-changes")
 async def commit_changes(
     token: str = Query(...), 
@@ -507,7 +699,43 @@ async def commit_changes(
 @router.post("/recheck-pr")
 async def recheck_pr(token: str = Query(...), username: str = Query(...), repo_name: str = Query(...), pr_number: int = Query(...)):
     """
-    Re-run analysis on the latest commit of a PR.
-    This is essentially the same as analyze_pr but explicitly for rechecking.
+    Re-analyze PR. Checks if code has changed before re-analyzing.
     """
-    return await analyze_pr(token=token, username=username, repo_name=repo_name, pr_number=pr_number)
+    if not token or not username:
+        return JSONResponse(
+            {"error": "Missing authentication. Please log in again."},
+            status_code=401
+        )
+    
+    async with httpx.AsyncClient() as client:
+        # Fetch current PR details to get the latest commit SHA
+        pr_resp = await client.get(
+            f"https://api.github.com/repos/{username}/{repo_name}/pulls/{pr_number}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        if pr_resp.status_code != 200:
+            return JSONResponse(
+                {"error": "Failed to fetch PR details."},
+                status_code=pr_resp.status_code
+            )
+        
+        pr_data = pr_resp.json()
+        current_head_sha = pr_data['head']['sha']
+        cache_key = f"{username}:{repo_name}:{pr_number}:{current_head_sha}"
+        
+        # Check if we have a cached analysis for this exact commit
+        if cache_key in pr_analysis_cache:
+            logging.info(f"No changes detected for PR #{pr_number} (SHA: {current_head_sha})")
+            return JSONResponse(
+                {
+                    "no_changes": True,
+                    "message": "No changes detected in the PR since the last analysis. Please make changes to the code and try again.",
+                    "head_sha": current_head_sha
+                },
+                status_code=200
+            )
+        
+        # If we reach here, the PR has changed, so analyze it
+        logging.info(f"Changes detected for PR #{pr_number}, proceeding with analysis")
+        return await analyze_pr(token=token, username=username, repo_name=repo_name, pr_number=pr_number)

@@ -1,18 +1,33 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
+import "./RepoSelect.css";
 
 interface Repository {
     id: number;
     name: string;
     description: string;
     language: string;
+    languages_url: string;
     updated_at: string;
+    open_issues_count?: number;
+}
+
+interface PRStats {
+    total: number;
+    open: number;
+    closed: number;
+}
+
+interface LanguagesMap {
+    [key: string]: string[];
 }
 
 export default function RepoSelect() {
     const navigate = useNavigate();
     const [repos, setRepos] = useState<Repository[]>([]);
+    const [prStats, setPrStats] = useState<Map<string, PRStats>>(new Map());
+    const [languages, setLanguages] = useState<LanguagesMap>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -40,7 +55,59 @@ export default function RepoSelect() {
                 }
                 const data = await res.json();
                 console.log("Fetched repos:", data);
-                setRepos(data.repositories || []);
+                const repositories = data.repositories || [];
+                console.log("First repo languages_url:", repositories[0]?.languages_url);
+                setRepos(repositories);
+                
+                // Fetch PR stats and languages for each repository
+                const statsMap = new Map<string, PRStats>();
+                const langMap: LanguagesMap = {};
+                
+                await Promise.all(
+                    repositories.map(async (repo: Repository) => {
+                        try {
+                            // Fetch PR stats
+                            const prRes = await fetch(
+                                `http://localhost:8000/repo-pull-requests?token=${token}&username=${username}&repo_name=${repo.name}`
+                            );
+                            if (prRes.ok) {
+                                const prData = await prRes.json();
+                                const pulls = prData.pull_requests || [];
+                                const stats: PRStats = {
+                                    total: pulls.length,
+                                    open: pulls.filter((pr: any) => pr.state === 'open').length,
+                                    closed: pulls.filter((pr: any) => pr.state === 'closed').length,
+                                };
+                                statsMap.set(repo.name, stats);
+                            }
+                            
+                            // Fetch languages
+                            if (repo.languages_url) {
+                                console.log(`Fetching languages for ${repo.name} from:`, repo.languages_url);
+                                const langRes = await fetch(repo.languages_url, {
+                                    headers: {
+                                        'Authorization': `Bearer ${token}`,
+                                        'Accept': 'application/vnd.github.v3+json'
+                                    }
+                                });
+                                if (langRes.ok) {
+                                    const langData = await langRes.json();
+                                    console.log(`Languages for ${repo.name}:`, langData);
+                                    langMap[repo.name] = Object.keys(langData);
+                                } else {
+                                    console.error(`Failed to fetch languages for ${repo.name}:`, langRes.status);
+                                }
+                            } else {
+                                console.log(`No languages_url for ${repo.name}`);
+                            }
+                        } catch (err) {
+                            console.error(`Failed to fetch data for ${repo.name}:`, err);
+                        }
+                    })
+                );
+                
+                setPrStats(statsMap);
+                setLanguages(langMap);
                 setLoading(false);
             } catch (err) {
                 console.error("Failed to fetch repositories:", err);
@@ -56,97 +123,144 @@ export default function RepoSelect() {
         navigate(`/repo/${repoName}?token=${token}&username=${username}`);
     };
 
+    const getLanguageIcon = (language: string): string => {
+        const icons: { [key: string]: string } = {
+            'JavaScript': '🟨',
+            'TypeScript': '🔷',
+            'Python': '🐍',
+            'Java': '☕',
+            'C': '🔵',
+            'C++': '🔵',
+            'C#': '💜',
+            'Ruby': '💎',
+            'Go': '🐹',
+            'Rust': '🦀',
+            'PHP': '🐘',
+            'Swift': '🍎',
+            'Kotlin': '🟣',
+            'Dart': '🎯',
+            'HTML': '🌐',
+            'CSS': '🎨',
+            'Shell': '🐚',
+            'R': '📊',
+            'Scala': '🔴',
+            'Lua': '🌙',
+            'Perl': '🐪',
+            'Haskell': '🎓',
+            'Elixir': '💧',
+            'Clojure': '🔵',
+            'Vue': '💚',
+            'React': '⚛️',
+            'Objective-C': '🍏',
+            'Assembly': '⚙️',
+            'MATLAB': '📐',
+            'Groovy': '⚡',
+            'Julia': '🔬',
+        };
+        return icons[language] || '📄';
+    };
+
+    const isActualProgrammingLanguage = (language: string): boolean => {
+        // List of non-programming languages and markup/config files to exclude
+        const excludeList = [
+            'Rich Text Format',
+            'Makefile',
+            'Dockerfile',
+            'CMake',
+            'YAML',
+            'JSON',
+            'XML',
+            'Markdown',
+            'Text',
+            'INI',
+            'TOML',
+            'CSV',
+            'Batchfile',
+            'PowerShell',
+            'Vim Script',
+            'Emacs Lisp',
+            'TeX',
+            'Vim Snippet',
+        ];
+        return !excludeList.includes(language);
+    };
+
     if (loading) {
         return (
-            <div
-                style={{
-                    minHeight: "100vh",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "#0D0827",
-                    color: "white",
-                }}
-            >
+            <div className="repo-select-loading">
                 <p>Loading your repositories...</p>
             </div>
         );
     }
 
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#0D0827",
-                color: "white",
-                textAlign: "center",
-                padding: "2rem",
-            }}
-        >
-            <h1 className="landing-title">
+        <div className="repo-select-container">
+            <h1 className="repo-select-title">
                 Select a Repository
             </h1>
 
             {error && (
-                <p style={{ color: "#ff6b6b", marginBottom: "2rem" }}>
+                <p className="repo-select-error">
                     {error}
                 </p>
             )}
 
             {!error && repos.length === 0 && (
-                <p style={{ color: "#888" }}>No repositories found.</p>
+                <p className="repo-select-no-repos">No repositories found.</p>
             )}
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                    gap: "1rem",
-                    width: "100%",
-                    maxWidth: "1200px",
-                    marginTop: "2rem",
-                }}
-            >
-                {repos.map((repo) => (
-                    <div
-                        key={repo.id}
-                        onClick={() => handleRepoClick(repo.name)}
-                        style={{
-                            backgroundColor: "transparent",
-                            border: "1px solid #3C3C5C",
-                            borderRadius: "10px",
-                            padding: "1.5rem",
-                            cursor: "pointer",
-                            transition: "all 0.3s ease",
-                            fontFamily: "Jersey 20, sans-serif",
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "#1a1a2e";
-                            e.currentTarget.style.borderColor = "#646cff";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "transparent";
-                            e.currentTarget.style.borderColor = "#3C3C5C";
-                        }}
-                    >
-                        <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.5rem" }}>
-                            {repo.name}
-                        </h3>
-                        {repo.description && (
-                            <p style={{ color: "#888", fontSize: "0.9rem", margin: "0.5rem 0" }}>
-                                {repo.description}
+            <div className="repo-select-grid">
+                {repos.map((repo) => {
+                    const stats = prStats.get(repo.name);
+                    const repoLanguages = (languages[repo.name] || []).filter(isActualProgrammingLanguage);
+                    return (
+                        <div
+                            key={repo.id}
+                            onClick={() => handleRepoClick(repo.name)}
+                            className="repo-card"
+                        >
+                            <div className="repo-card-header">
+                                <h3>{repo.name}</h3>
+                                {stats && (
+                                    <div className="repo-card-stats">
+                                        <span>Pull Requests: {stats.total}</span>
+                                        <span>Last Updated: {new Date(repo.updated_at).toLocaleDateString()}</span>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <p className="repo-card-description">
+                                {repo.description || "No description available"}
                             </p>
-                        )}
-                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem", fontSize: "0.85rem", color: "#888" }}>
-                            {repo.language && <span>🔹 {repo.language}</span>}
-                            <span>Updated: {new Date(repo.updated_at).toLocaleDateString()}</span>
+                            
+                            <div className="repo-card-footer">
+                                {repoLanguages.length > 0 ? (
+                                    <div className="repo-language">
+                                        {repoLanguages.map((lang, idx) => (
+                                            <span key={lang}>
+                                                {getLanguageIcon(lang)} {lang}
+                                                {idx < repoLanguages.length - 1 ? ', ' : ''}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : repo.language && isActualProgrammingLanguage(repo.language) ? (
+                                    <div className="repo-language">
+                                        {getLanguageIcon(repo.language)} {repo.language}
+                                    </div>
+                                ) : (
+                                    <div className="repo-language">
+                                        📄 No language data
+                                    </div>
+                                )}
+                                {!stats && (
+                                    <span className="repo-updated">
+                                        Updated: {new Date(repo.updated_at).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

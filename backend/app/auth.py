@@ -94,6 +94,7 @@ async def get_user_repos(token: str = Query(...), username: str = Query(...)):
                 "name": repo["name"],
                 "description": repo.get("description", ""),
                 "language": repo.get("language", ""),
+                "languages_url": repo.get("languages_url", ""),
                 "updated_at": repo["updated_at"],
                 "url": repo["html_url"]
             }

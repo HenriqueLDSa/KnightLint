@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import "../App.css";
+import "./RepoDashboard.css";
 
 interface PullRequest {
     id: number;
@@ -9,6 +10,14 @@ interface PullRequest {
     user: string;
     created_at: string;
     url: string;
+    body?: string;
+    head?: {
+        ref: string;
+    };
+    base?: {
+        ref: string;
+    };
+    changed_files?: number;
 }
 
 export default function RepoDashboard() {
@@ -19,12 +28,22 @@ export default function RepoDashboard() {
     const username = searchParams.get("username") || "";
 
     const [prs, setPrs] = useState<PullRequest[]>([]);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const year = date.getFullYear();
+        return `${month}/${day}/${year}`;
+    };
 
     useEffect(() => {
         // Check if token and username are present
         if (!token || !username) {
             setError("Authentication required. Please log in with GitHub again.");
+            setLoading(false);
             return;
         }
 
@@ -37,95 +56,94 @@ export default function RepoDashboard() {
                     const errorData = await res.json().catch(() => ({}));
                     console.error("Failed to fetch pull requests. Status:", res.status, "Error:", errorData);
                     setError(errorData.error || `Failed to load pull requests (Status: ${res.status})`);
+                    setLoading(false);
                     return;
                 }
                 const data = await res.json();
                 console.log("Fetched PRs:", data.pull_requests);
                 setPrs(data.pull_requests || []);
                 setError(""); // Clear any previous errors
+                setLoading(false);
             } catch (err) {
                 console.error("Failed to fetch pull requests:", err);
                 console.log("Repo:", repoName, "Token exists:", !!token, "Username:", username);
                 setError("An error occurred while loading pull requests. Check console for details.");
+                setLoading(false);
             }
         };
 
         fetchPRs();
     }, [repoName, token, username]);
 
+    if (loading) {
+        return (
+            <div className="repo-dashboard-loading">
+                <p>Loading pull requests...</p>
+            </div>
+        );
+    }
+
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#0D0827",
-                color: "white",
-                textAlign: "center",
-            }}
-        >
-            <button
-                onClick={() => navigate(`/select-repo?token=${token}&username=${username}`)}
-                style={{
-                    position: "absolute",
-                    top: "2rem",
-                    left: "2rem",
-                    backgroundColor: "transparent",
-                    border: "1px solid #3C3C5C",
-                    color: "white",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontFamily: "Jersey 20, sans-serif",
-                    fontSize: "1rem",
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#1a1a2e";
-                    e.currentTarget.style.borderColor = "#646cff";
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.borderColor = "#3C3C5C";
-                }}
-            >
-                ← Back to Repos
-            </button>
-
-            <h1 className="landing-title">
-                {repoName}
-            </h1>
-
-            {error && <p style={{ color: "#ff6b6b" }}>{error}</p>}
-
-            {prs.map((pr) => (
-                <div
-                    key={pr.id}
-                    onClick={() =>
-                        navigate(`/repo/${repoName}/pr/${pr.number}?token=${token}&username=${username}`)
-                    }
-                    style={{
-                        width: "300px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        background: "transparent",
-                        border: "1px solid #3C3C5C",
-                        borderRadius: "10px",
-                        padding: "0.75rem 1rem",
-                        marginBottom: "0.75rem",
-                        cursor: "pointer",
-                    }}
+        <div className="repo-dashboard-container">
+            <div className="repo-dashboard-header">
+                <button
+                    className="rd-back-button"
+                    onClick={() => navigate(`/?token=${token}&username=${username}`)}
+                    aria-label="Back to repositories"
                 >
-                    <span>PR #{pr.number} — {pr.title}</span>
-                    <span>[XP]</span>
-                </div>
-            ))}
+                    ← Back to repositories
+                </button>
+                <h1 className="repo-dashboard-title">
+                    {repoName}
+                </h1>
+            </div>
+
+            {error && (
+                <p className="repo-dashboard-error">
+                    {error}
+                </p>
+            )}
 
             {!error && prs.length === 0 && (
-                <p>No pull requests found for this repository.</p>
+                <p className="repo-dashboard-no-prs">No pull requests found for this repository.</p>
             )}
+
+            <div className="repo-dashboard-grid">
+                {prs.map((pr) => (
+                    <div
+                        key={pr.id}
+                        onClick={() =>
+                            navigate(`/repo/${repoName}/pr/${pr.number}?token=${token}&username=${username}`)
+                        }
+                        className="pr-card"
+                    >
+                        <div className="pr-card-header">
+                            <h3>{pr.title}</h3>
+                            <div className="pr-card-stats">
+                                {pr.changed_files !== undefined && (
+                                    <span>Files Changed: {pr.changed_files}</span>
+                                )}
+                                <span>Created: {formatDate(pr.created_at)}</span>
+                            </div>
+                        </div>
+
+                        <p className="pr-card-description">
+                            {pr.body || "No description provided"}
+                        </p>
+
+                        <div className="pr-card-footer">
+                            {(pr.head?.ref || pr.base?.ref) && (
+                                <div className="pr-branch-info">
+                                    {pr.head?.ref && <span className="branch-badge">{pr.head.ref}</span>}
+                                    {pr.head?.ref && pr.base?.ref && <span>→</span>}
+                                    {pr.base?.ref && <span className="branch-badge">{pr.base.ref}</span>}
+                                </div>
+                            )}
+                            <span className="pr-author">Author: {pr.user}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

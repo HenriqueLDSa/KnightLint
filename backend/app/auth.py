@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 # Load env variables here
 load_dotenv()
 
+
 router = APIRouter()
 
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")

@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 
 function LandingPage() {
   const [knightImage, setKnightImage] = useState("/knight2.png");
-  const frontendBaseUrl = "https://frontend-production-ee09.up.railway.app";
+  const backendBaseUrl = "https://backend-production-9cc8.up.railway.app";
 
   useEffect(() => {
     const blinkSequence = () => {
@@ -30,7 +30,7 @@ function LandingPage() {
   }, []);
 
   const handleGitHubLogin = () => {
-    window.location.href = `${frontendBaseUrl}/login`;
+    window.location.href = `${backendBaseUrl}/login`;
   };
 
   return (

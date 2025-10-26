@@ -58,11 +58,11 @@ export default function RepoSelect() {
                 const repositories = data.repositories || [];
                 console.log("First repo languages_url:", repositories[0]?.languages_url);
                 setRepos(repositories);
-                
+
                 // Fetch PR stats and languages for each repository
                 const statsMap = new Map<string, PRStats>();
                 const langMap: LanguagesMap = {};
-                
+
                 await Promise.all(
                     repositories.map(async (repo: Repository) => {
                         try {
@@ -80,7 +80,7 @@ export default function RepoSelect() {
                                 };
                                 statsMap.set(repo.name, stats);
                             }
-                            
+
                             // Fetch languages
                             if (repo.languages_url) {
                                 console.log(`Fetching languages for ${repo.name} from:`, repo.languages_url);
@@ -105,7 +105,7 @@ export default function RepoSelect() {
                         }
                     })
                 );
-                
+
                 setPrStats(statsMap);
                 setLanguages(langMap);
                 setLoading(false);
@@ -228,11 +228,11 @@ export default function RepoSelect() {
                                     </div>
                                 )}
                             </div>
-                            
+
                             <p className="repo-card-description">
                                 {repo.description || "No description available"}
                             </p>
-                            
+
                             <div className="repo-card-footer">
                                 {repoLanguages.length > 0 ? (
                                     <div className="repo-language">

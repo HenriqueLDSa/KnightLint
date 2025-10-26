@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import "../App.css";
-import "./RepoDashboard.css";
+import "./css/RepoDashboard.css";
 
 interface PullRequest {
     id: number;

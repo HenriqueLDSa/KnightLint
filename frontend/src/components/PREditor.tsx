@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import "../App.css";
-import "../PREditor.css";
+import "../css/PREditor.css";
 
 interface PRFile {
     filename: string;
